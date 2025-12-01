@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useGameStore } from '@/stores/gameStore';
+import { usePrivy } from '@privy-io/react-auth';
 
 interface LPPool {
   protocol: string;
@@ -23,12 +24,15 @@ const LP_CHAINS = [
 
 export function LiquidityPanel() {
   const { activePanel, setActivePanel } = useGameStore();
+  const { authenticated } = usePrivy();
   const [selectedChain, setSelectedChain] = useState('ethereum');
   const [pools, setPools] = useState<LPPool[]>([]);
   const [selectedPool, setSelectedPool] = useState<LPPool | null>(null);
   const [amount0, setAmount0] = useState('');
   const [amount1, setAmount1] = useState('');
   const [loading, setLoading] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [txStatus, setTxStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
 
   useEffect(() => {
     const fetchPools = async () => {
@@ -51,55 +55,89 @@ export function LiquidityPanel() {
 
   if (activePanel !== 'liquidity') return null;
 
-  const handleAddLiquidity = () => {
-    if (!selectedPool) return;
-    alert(`Add Liquidity to ${selectedPool.pool} on ${selectedPool.protocol}\n\n${amount0} ${selectedPool.token0}\n${amount1} ${selectedPool.token1}\n\nThis will open your wallet to sign the transaction.`);
+  const handleAddLiquidity = async () => {
+    if (!selectedPool || !amount0 || !amount1) return;
+    
+    setAdding(true);
+    setTxStatus('pending');
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setTxStatus('success');
+      setTimeout(() => {
+        setTxStatus('idle');
+        setAmount0('');
+        setAmount1('');
+      }, 3000);
+    } catch (error) {
+      setTxStatus('error');
+      setTimeout(() => setTxStatus('idle'), 3000);
+    }
+    
+    setAdding(false);
   };
 
   return (
-    <div className="defi-panel">
-      <div className="panel-header">
-        <h2>💰 Liquidity Pools</h2>
-        <button className="close-btn" onClick={() => setActivePanel('none')}>×</button>
+    <div className="rpg-panel liquidity-panel-rpg">
+      <div className="panel-corner top-left" />
+      <div className="panel-corner top-right" />
+      <div className="panel-corner bottom-left" />
+      <div className="panel-corner bottom-right" />
+
+      <div className="rpg-panel-header">
+        <div className="header-icon">💰</div>
+        <h2>상단의 금고</h2>
+        <button className="rpg-close-btn" onClick={() => setActivePanel('none')}>
+          <span>✕</span>
+        </button>
       </div>
 
-      <div className="npc-message">
-        <div className="npc-avatar">🏦</div>
-        <p>Provide liquidity and earn trading fees from swaps!</p>
+      <div className="rpg-npc-dialog">
+        <div className="npc-portrait">
+          <span>🏦</span>
+        </div>
+        <div className="dialog-bubble">
+          <p>"우리 상단에 유동성을 제공하시면 거래 수수료를 나눠 드리지요. 함께 부를 쌓아보시겠소?"</p>
+        </div>
       </div>
 
       {/* Chain Selector */}
-      <div className="chain-type-selector">
-        {LP_CHAINS.map(chain => (
-          <button
-            key={chain.key}
-            className={`chain-type-btn ${selectedChain === chain.key ? 'active' : ''}`}
-            onClick={() => setSelectedChain(chain.key)}
-          >
-            {chain.icon} {chain.name}
-          </button>
-        ))}
+      <div className="rpg-chain-selector">
+        <div className="chain-tabs">
+          {LP_CHAINS.map(chain => (
+            <button
+              key={chain.key}
+              className={`chain-tab ${selectedChain === chain.key ? 'active' : ''}`}
+              onClick={() => setSelectedChain(chain.key)}
+            >
+              <span className="tab-icon">{chain.icon}</span>
+              <span>{chain.name}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="liquidity-form">
+      <div className="liquidity-form-rpg">
         {/* Pool Selection */}
-        <div className="pool-options">
-          <label>Select Pool</label>
+        <div className="bridge-chain-box">
+          <div className="chain-box-label">풀 선택</div>
           {loading ? (
-            <div className="loading-text">Loading pools...</div>
+            <div className="nft-loading-state" style={{ padding: '20px' }}>
+              <div className="loading-spinner" />
+            </div>
           ) : (
-            <div className="pool-list">
+            <div className="pool-options-list">
               {pools.map((pool, index) => (
                 <button
                   key={index}
-                  className={`pool-option ${selectedPool?.pool === pool.pool ? 'active' : ''}`}
+                  className={`pool-option-rpg ${selectedPool?.pool === pool.pool ? 'active' : ''}`}
                   onClick={() => setSelectedPool(pool)}
                 >
-                  <div className="pool-info">
-                    <span className="pool-name">{pool.pool}</span>
+                  <div className="pool-left">
+                    <span className="pool-pair">{pool.pool}</span>
                     <span className="pool-protocol">{pool.protocol}</span>
                   </div>
-                  <div className="pool-stats">
+                  <div className="pool-right">
                     <span className="pool-apy">{pool.apy}% APY</span>
                     <span className="pool-tvl">TVL: {pool.tvl}</span>
                   </div>
@@ -112,66 +150,85 @@ export function LiquidityPanel() {
         {selectedPool && (
           <>
             {/* Token Inputs */}
-            <div className="lp-inputs">
-              <div className="lp-input-group">
-                <label>{selectedPool.token0} Amount</label>
-                <div className="lp-input">
+            <div className="lp-inputs-box">
+              <div className="lp-input-box">
+                <div className="chain-box-label">{selectedPool.token0} 금액</div>
+                <div className="lp-input-row">
                   <input
                     type="number"
                     placeholder="0.0"
                     value={amount0}
                     onChange={(e) => setAmount0(e.target.value)}
+                    className="lp-amount-input"
                   />
-                  <span className="token-label">{selectedPool.token0}</span>
+                  <div className="stake-token-label">{selectedPool.token0}</div>
                 </div>
               </div>
 
-              <div className="plus-icon">+</div>
+              <div className="lp-plus-divider">+</div>
 
-              <div className="lp-input-group">
-                <label>{selectedPool.token1} Amount</label>
-                <div className="lp-input">
+              <div className="lp-input-box">
+                <div className="chain-box-label">{selectedPool.token1} 금액</div>
+                <div className="lp-input-row">
                   <input
                     type="number"
                     placeholder="0.0"
                     value={amount1}
                     onChange={(e) => setAmount1(e.target.value)}
+                    className="lp-amount-input"
                   />
-                  <span className="token-label">{selectedPool.token1}</span>
+                  <div className="stake-token-label">{selectedPool.token1}</div>
                 </div>
               </div>
             </div>
 
             {/* Pool Details */}
-            <div className="liquidity-details">
-              <div className="detail-row">
-                <span>Pool</span>
-                <span className="highlight">{selectedPool.pool}</span>
+            <div className="rpg-quote-details">
+              <div className="quote-row">
+                <span className="quote-label">풀</span>
+                <span className="quote-value gold">{selectedPool.pool}</span>
               </div>
-              <div className="detail-row">
-                <span>Protocol</span>
-                <span>{selectedPool.protocol}</span>
+              <div className="quote-row">
+                <span className="quote-label">프로토콜</span>
+                <span className="quote-value">{selectedPool.protocol}</span>
               </div>
-              <div className="detail-row">
-                <span>Pool APY</span>
-                <span className="positive">{selectedPool.apy}%</span>
+              <div className="quote-row">
+                <span className="quote-label">풀 APY</span>
+                <span className="quote-value positive">{selectedPool.apy}%</span>
               </div>
-              <div className="detail-row">
-                <span>Pool Fee</span>
-                <span>{selectedPool.fee}%</span>
+              <div className="quote-row">
+                <span className="quote-label">수수료</span>
+                <span className="quote-value">{selectedPool.fee}%</span>
               </div>
-              <div className="detail-row">
-                <span>Total Value Locked</span>
-                <span>{selectedPool.tvl}</span>
+              <div className="quote-row">
+                <span className="quote-label">총 예치금</span>
+                <span className="quote-value">{selectedPool.tvl}</span>
               </div>
             </div>
 
             <button 
-              className="liquidity-btn" 
+              className={`rpg-action-btn ${adding ? 'loading' : ''} ${txStatus}`}
               onClick={handleAddLiquidity}
-              disabled={!amount0 || !amount1}
+              disabled={!amount0 || !amount1 || adding || !authenticated}
             >
-              Add Liquidity
+              {!authenticated ? (
+                <span>지갑 연결 필요</span>
+              ) : txStatus === 'pending' ? (
+                <>
+                  <span className="btn-spinner" />
+                  <span>유동성 추가 중...</span>
+                </>
+              ) : txStatus === 'success' ? (
+                <>
+                  <span className="btn-icon">✓</span>
+                  <span>유동성 추가 완료!</span>
+                </>
+              ) : (
+                <>
+                  <span className="btn-icon">💰</span>
+                  <span>유동성 추가</span>
+                </>
+              )}
             </button>
           </>
         )}

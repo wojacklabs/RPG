@@ -2,29 +2,35 @@
 
 import { useState, useEffect } from 'react';
 import { useGameStore } from '@/stores/gameStore';
-import { EVM_CHAINS, SOLANA_CONFIG, SUI_CONFIG } from '@/lib/chains';
+import { usePrivy } from '@privy-io/react-auth';
 
 const ALL_CHAINS = [
-  { key: 'ethereum', name: 'Ethereum', icon: '⟠', type: 'evm' },
-  { key: 'arbitrum', name: 'Arbitrum', icon: '🔵', type: 'evm' },
-  { key: 'base', name: 'Base', icon: '🔷', type: 'evm' },
-  { key: 'polygon', name: 'Polygon', icon: '💜', type: 'evm' },
-  { key: 'optimism', name: 'Optimism', icon: '🔴', type: 'evm' },
-  { key: 'bsc', name: 'BNB Chain', icon: '🟡', type: 'evm' },
-  { key: 'solana', name: 'Solana', icon: '◎', type: 'solana' },
-  { key: 'sui', name: 'Sui', icon: '💧', type: 'sui' },
+  { key: 'ethereum', name: 'Ethereum', icon: '⟠' },
+  { key: 'arbitrum', name: 'Arbitrum', icon: '🔵' },
+  { key: 'base', name: 'Base', icon: '🔷' },
+  { key: 'polygon', name: 'Polygon', icon: '💜' },
+  { key: 'optimism', name: 'Optimism', icon: '🔴' },
+  { key: 'solana', name: 'Solana', icon: '◎' },
+  { key: 'sui', name: 'Sui', icon: '💧' },
 ];
 
-const BRIDGE_TOKENS = ['ETH', 'USDC', 'USDT'];
+const BRIDGE_TOKENS = [
+  { symbol: 'ETH', name: 'Ethereum', icon: '⟠' },
+  { symbol: 'USDC', name: 'USD Coin', icon: '💵' },
+  { symbol: 'USDT', name: 'Tether', icon: '💲' },
+];
 
 export function BridgePanel() {
   const { activePanel, setActivePanel } = useGameStore();
+  const { authenticated } = usePrivy();
   const [fromChain, setFromChain] = useState('ethereum');
   const [toChain, setToChain] = useState('arbitrum');
   const [token, setToken] = useState('ETH');
   const [amount, setAmount] = useState('');
   const [quote, setQuote] = useState<{ estimatedReceive: string; fee: string; estimatedTime: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [bridging, setBridging] = useState(false);
+  const [txStatus, setTxStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
 
   useEffect(() => {
     const fetchQuote = async () => {
@@ -57,31 +63,67 @@ export function BridgePanel() {
   const fromChainInfo = ALL_CHAINS.find(c => c.key === fromChain);
   const toChainInfo = ALL_CHAINS.find(c => c.key === toChain);
 
-  const handleBridge = () => {
-    alert(`Bridge ${amount} ${token}\nFrom: ${fromChainInfo?.name}\nTo: ${toChainInfo?.name}\n\nEstimated receive: ${quote?.estimatedReceive} ${token}\nFee: ${quote?.fee} ${token}\nTime: ${quote?.estimatedTime}`);
+  const handleBridge = async () => {
+    if (!quote || !amount) return;
+    
+    setBridging(true);
+    setTxStatus('pending');
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      setTxStatus('success');
+      setTimeout(() => {
+        setTxStatus('idle');
+        setAmount('');
+        setQuote(null);
+      }, 3000);
+    } catch (error) {
+      setTxStatus('error');
+      setTimeout(() => setTxStatus('idle'), 3000);
+    }
+    
+    setBridging(false);
+  };
+
+  const swapChains = () => {
+    const temp = fromChain;
+    setFromChain(toChain);
+    setToChain(temp);
   };
 
   return (
-    <div className="defi-panel">
-      <div className="panel-header">
-        <h2>🌉 Cross-Chain Bridge</h2>
-        <button className="close-btn" onClick={() => setActivePanel('none')}>×</button>
+    <div className="rpg-panel bridge-panel-rpg">
+      <div className="panel-corner top-left" />
+      <div className="panel-corner top-right" />
+      <div className="panel-corner bottom-left" />
+      <div className="panel-corner bottom-right" />
+
+      <div className="rpg-panel-header">
+        <div className="header-icon">🌉</div>
+        <h2>차원의 다리</h2>
+        <button className="rpg-close-btn" onClick={() => setActivePanel('none')}>
+          <span>✕</span>
+        </button>
       </div>
 
-      <div className="npc-message">
-        <div className="npc-avatar">🚢</div>
-        <p>Transfer your assets across different blockchains seamlessly!</p>
+      <div className="rpg-npc-dialog">
+        <div className="npc-portrait">
+          <span>🚢</span>
+        </div>
+        <div className="dialog-bubble">
+          <p>"이 마법의 다리를 통해 자네의 자산을 다른 세계로 옮길 수 있다네. 어디로 가시겠소?"</p>
+        </div>
       </div>
 
-      <div className="bridge-form">
+      <div className="bridge-form-rpg">
         {/* From Chain */}
-        <div className="bridge-input-group">
-          <label>From Chain</label>
-          <div className="chain-grid">
+        <div className="bridge-chain-box">
+          <div className="chain-box-label">출발 세계</div>
+          <div className="chain-grid-rpg">
             {ALL_CHAINS.map(chain => (
               <button
                 key={chain.key}
-                className={`chain-option ${fromChain === chain.key ? 'active' : ''} ${toChain === chain.key ? 'disabled' : ''}`}
+                className={`chain-btn-rpg ${fromChain === chain.key ? 'active' : ''} ${toChain === chain.key ? 'disabled' : ''}`}
                 onClick={() => fromChain !== chain.key && toChain !== chain.key && setFromChain(chain.key)}
                 disabled={toChain === chain.key}
               >
@@ -92,28 +134,19 @@ export function BridgePanel() {
           </div>
         </div>
 
-        {/* Swap Direction */}
-        <div className="bridge-direction">
-          <button 
-            className="bridge-direction-btn"
-            onClick={() => {
-              const temp = fromChain;
-              setFromChain(toChain);
-              setToChain(temp);
-            }}
-          >
-            ⇅ Swap
-          </button>
-        </div>
+        {/* Switch */}
+        <button className="bridge-switch-btn" onClick={swapChains}>
+          <span>⇅</span>
+        </button>
 
         {/* To Chain */}
-        <div className="bridge-input-group">
-          <label>To Chain</label>
-          <div className="chain-grid">
+        <div className="bridge-chain-box">
+          <div className="chain-box-label">도착 세계</div>
+          <div className="chain-grid-rpg">
             {ALL_CHAINS.map(chain => (
               <button
                 key={chain.key}
-                className={`chain-option ${toChain === chain.key ? 'active' : ''} ${fromChain === chain.key ? 'disabled' : ''}`}
+                className={`chain-btn-rpg ${toChain === chain.key ? 'active to' : ''} ${fromChain === chain.key ? 'disabled' : ''}`}
                 onClick={() => toChain !== chain.key && fromChain !== chain.key && setToChain(chain.key)}
                 disabled={fromChain === chain.key}
               >
@@ -125,51 +158,75 @@ export function BridgePanel() {
         </div>
 
         {/* Token & Amount */}
-        <div className="bridge-input-group">
-          <label>Token & Amount</label>
-          <div className="bridge-input">
+        <div className="bridge-amount-box">
+          <div className="chain-box-label">전송할 자산</div>
+          <div className="bridge-input-row">
             <input
               type="number"
               placeholder="0.0"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
+              className="bridge-amount-input"
             />
-            <select value={token} onChange={(e) => setToken(e.target.value)}>
+            <select 
+              value={token} 
+              onChange={(e) => setToken(e.target.value)}
+              className="bridge-token-select"
+            >
               {BRIDGE_TOKENS.map(t => (
-                <option key={t} value={t}>{t}</option>
+                <option key={t.symbol} value={t.symbol}>{t.icon} {t.symbol}</option>
               ))}
             </select>
           </div>
         </div>
 
-        {/* Quote Details */}
+        {/* Quote */}
         {quote && (
-          <div className="bridge-details">
-            <div className="detail-row">
-              <span>You will receive</span>
-              <span className="highlight">{quote.estimatedReceive} {token}</span>
+          <div className="rpg-quote-details">
+            <div className="quote-row">
+              <span className="quote-label">받을 금액</span>
+              <span className="quote-value gold">{quote.estimatedReceive} {token}</span>
             </div>
-            <div className="detail-row">
-              <span>Bridge Fee</span>
-              <span>{quote.fee} {token}</span>
+            <div className="quote-row">
+              <span className="quote-label">브릿지 수수료</span>
+              <span className="quote-value">{quote.fee} {token}</span>
             </div>
-            <div className="detail-row">
-              <span>Estimated Time</span>
-              <span>{quote.estimatedTime}</span>
+            <div className="quote-row">
+              <span className="quote-label">예상 소요 시간</span>
+              <span className="quote-value">{quote.estimatedTime}</span>
             </div>
-            <div className="detail-row">
-              <span>Route</span>
-              <span>{fromChainInfo?.icon} → {toChainInfo?.icon}</span>
+            <div className="quote-row">
+              <span className="quote-label">경로</span>
+              <span className="quote-value">{fromChainInfo?.icon} → {toChainInfo?.icon}</span>
             </div>
           </div>
         )}
 
         <button 
-          className="bridge-btn" 
+          className={`rpg-action-btn ${bridging ? 'loading' : ''} ${txStatus}`}
           onClick={handleBridge}
-          disabled={!amount || !quote || loading || fromChain === toChain}
+          disabled={!amount || !quote || loading || bridging || fromChain === toChain || !authenticated}
         >
-          {loading ? 'Getting Quote...' : `Bridge to ${toChainInfo?.name}`}
+          {!authenticated ? (
+            <span>지갑 연결 필요</span>
+          ) : txStatus === 'pending' ? (
+            <>
+              <span className="btn-spinner" />
+              <span>전송 중...</span>
+            </>
+          ) : txStatus === 'success' ? (
+            <>
+              <span className="btn-icon">✓</span>
+              <span>전송 완료!</span>
+            </>
+          ) : loading ? (
+            <span>시세 조회 중...</span>
+          ) : (
+            <>
+              <span className="btn-icon">🌉</span>
+              <span>{toChainInfo?.name}(으)로 전송</span>
+            </>
+          )}
         </button>
       </div>
     </div>

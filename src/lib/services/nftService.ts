@@ -1,5 +1,5 @@
 // NFT Marketplace Service
-// Handles NFT listing, buying, and collection browsing across multiple chains
+// Real API integration with Reservoir (EVM) and Magic Eden (Solana)
 
 import { NFT_MARKETPLACES, type NFTChainKey } from '../chains';
 
@@ -8,16 +8,19 @@ import { NFT_MARKETPLACES, type NFTChainKey } from '../chains';
 // ============================================
 export interface NFTItem {
   id: string;
+  tokenId: string;
   name: string;
   description: string;
   image: string;
   collection: string;
+  collectionAddress: string;
   chain: string;
   price: string;
   currency: string;
   owner: string;
   marketplace: string;
   attributes?: { trait_type: string; value: string }[];
+  buyUrl?: string;
 }
 
 export interface NFTCollection {
@@ -34,18 +37,264 @@ export interface NFTCollection {
   volume24h: string;
 }
 
-export interface NFTListingParams {
-  nftAddress: string;
-  tokenId: string;
-  price: string;
-  currency: string;
-  chain: string;
+// ============================================
+// API Configuration
+// ============================================
+const RESERVOIR_BASE_URLS: Record<string, string> = {
+  ethereum: 'https://api.reservoir.tools',
+  arbitrum: 'https://api-arbitrum.reservoir.tools',
+  base: 'https://api-base.reservoir.tools',
+  polygon: 'https://api-polygon.reservoir.tools',
+  optimism: 'https://api-optimism.reservoir.tools',
+};
+
+const MAGIC_EDEN_BASE_URL = 'https://api-mainnet.magiceden.dev/v2';
+
+const CURRENCY_MAP: Record<string, string> = {
+  ethereum: 'ETH',
+  arbitrum: 'ETH',
+  base: 'ETH',
+  polygon: 'MATIC',
+  optimism: 'ETH',
+  solana: 'SOL',
+  sui: 'SUI',
+};
+
+// ============================================
+// Reservoir API (EVM Chains)
+// ============================================
+
+async function fetchReservoirCollections(chain: string): Promise<NFTCollection[]> {
+  const baseUrl = RESERVOIR_BASE_URLS[chain];
+  if (!baseUrl) return [];
+
+  try {
+    const response = await fetch(
+      `${baseUrl}/collections/v7?sortBy=1DayVolume&limit=20`,
+      {
+        headers: {
+          'accept': 'application/json',
+          'x-api-key': process.env.RESERVOIR_API_KEY || 'demo-api-key',
+        },
+        next: { revalidate: 60 }, // Cache for 1 minute
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`Reservoir API error: ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+    
+    return (data.collections || []).map((c: any) => ({
+      address: c.id || c.primaryContract,
+      name: c.name || 'Unknown',
+      symbol: c.symbol || '',
+      description: c.description || '',
+      image: c.image || '🖼️',
+      chain,
+      floorPrice: c.floorAsk?.price?.amount?.decimal?.toFixed(4) || '0',
+      currency: CURRENCY_MAP[chain],
+      totalSupply: c.tokenCount || 0,
+      owners: c.ownerCount || 0,
+      volume24h: c.volume?.['1day']?.toFixed(2) || '0',
+    }));
+  } catch (error) {
+    console.error('Reservoir collections error:', error);
+    return [];
+  }
+}
+
+async function fetchReservoirNFTs(
+  chain: string,
+  collectionAddress?: string,
+  limit = 20
+): Promise<NFTItem[]> {
+  const baseUrl = RESERVOIR_BASE_URLS[chain];
+  if (!baseUrl) return [];
+
+  try {
+    let url = `${baseUrl}/tokens/v7?limit=${limit}&sortBy=floorAskPrice&includeAttributes=true`;
+    if (collectionAddress) {
+      url += `&collection=${collectionAddress}`;
+    }
+
+    const response = await fetch(url, {
+      headers: {
+        'accept': 'application/json',
+        'x-api-key': process.env.RESERVOIR_API_KEY || 'demo-api-key',
+      },
+      next: { revalidate: 30 },
+    });
+
+    if (!response.ok) {
+      console.error(`Reservoir tokens API error: ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+
+    return (data.tokens || [])
+      .filter((t: any) => t.market?.floorAsk?.price) // Only listed tokens
+      .map((t: any) => ({
+        id: `${t.token?.contract}-${t.token?.tokenId}`,
+        tokenId: t.token?.tokenId || '',
+        name: t.token?.name || `#${t.token?.tokenId}`,
+        description: t.token?.description || '',
+        image: t.token?.image || t.token?.imageSmall || '🖼️',
+        collection: t.token?.collection?.name || 'Unknown',
+        collectionAddress: t.token?.contract || '',
+        chain,
+        price: t.market?.floorAsk?.price?.amount?.decimal?.toFixed(4) || '0',
+        currency: CURRENCY_MAP[chain],
+        owner: t.token?.owner?.slice(0, 6) + '...' + t.token?.owner?.slice(-4) || 'Unknown',
+        marketplace: t.market?.floorAsk?.source?.name || 'OpenSea',
+        attributes: (t.token?.attributes || []).map((a: any) => ({
+          trait_type: a.key,
+          value: a.value,
+        })),
+        buyUrl: t.market?.floorAsk?.source?.url || '',
+      }));
+  } catch (error) {
+    console.error('Reservoir NFTs error:', error);
+    return [];
+  }
+}
+
+async function getReservoirBuyPath(
+  chain: string,
+  collectionAddress: string,
+  tokenId: string,
+  buyer: string
+): Promise<any> {
+  const baseUrl = RESERVOIR_BASE_URLS[chain];
+  if (!baseUrl) return null;
+
+  try {
+    const response = await fetch(`${baseUrl}/execute/buy/v7`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'content-type': 'application/json',
+        'x-api-key': process.env.RESERVOIR_API_KEY || 'demo-api-key',
+      },
+      body: JSON.stringify({
+        items: [{ token: `${collectionAddress}:${tokenId}`, quantity: 1 }],
+        taker: buyer,
+        skipBalanceCheck: true,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('Reservoir buy error:', error);
+      return null;
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Reservoir buy path error:', error);
+    return null;
+  }
 }
 
 // ============================================
-// Mock Data for Demo
+// Magic Eden API (Solana)
 // ============================================
-const MOCK_COLLECTIONS: Record<string, NFTCollection[]> = {
+
+async function fetchMagicEdenCollections(): Promise<NFTCollection[]> {
+  try {
+    // Magic Eden popular collections
+    const response = await fetch(
+      `${MAGIC_EDEN_BASE_URL}/marketplace/popular_collections?timeRange=1d&limit=20`,
+      {
+        headers: {
+          'accept': 'application/json',
+        },
+        next: { revalidate: 60 },
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`Magic Eden collections error: ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+
+    return (data || []).map((c: any) => ({
+      address: c.collectionSymbol || c.symbol,
+      name: c.name || 'Unknown',
+      symbol: c.symbol || '',
+      description: c.description || '',
+      image: c.image || '🖼️',
+      chain: 'solana',
+      floorPrice: (c.floorPrice / 1e9).toFixed(2) || '0',
+      currency: 'SOL',
+      totalSupply: c.totalItems || 0,
+      owners: c.uniqueHolders || 0,
+      volume24h: ((c.volumeAll || 0) / 1e9).toFixed(2),
+    }));
+  } catch (error) {
+    console.error('Magic Eden collections error:', error);
+    return [];
+  }
+}
+
+async function fetchMagicEdenNFTs(
+  collectionSymbol?: string,
+  limit = 20
+): Promise<NFTItem[]> {
+  try {
+    let url: string;
+    if (collectionSymbol) {
+      url = `${MAGIC_EDEN_BASE_URL}/collections/${collectionSymbol}/listings?limit=${limit}`;
+    } else {
+      url = `${MAGIC_EDEN_BASE_URL}/marketplace/listings?limit=${limit}`;
+    }
+
+    const response = await fetch(url, {
+      headers: { 'accept': 'application/json' },
+      next: { revalidate: 30 },
+    });
+
+    if (!response.ok) {
+      console.error(`Magic Eden NFTs error: ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+
+    return (data || []).map((item: any) => ({
+      id: item.tokenMint,
+      tokenId: item.tokenMint,
+      name: item.extra?.name || `#${item.tokenMint?.slice(0, 8)}`,
+      description: '',
+      image: item.extra?.img || '🖼️',
+      collection: collectionSymbol || 'Unknown',
+      collectionAddress: collectionSymbol || '',
+      chain: 'solana',
+      price: (item.price / 1e9).toFixed(2),
+      currency: 'SOL',
+      owner: item.seller?.slice(0, 4) + '...' + item.seller?.slice(-4) || 'Unknown',
+      marketplace: 'Magic Eden',
+      attributes: (item.extra?.attributes || []).map((a: any) => ({
+        trait_type: a.trait_type,
+        value: a.value,
+      })),
+      buyUrl: `https://magiceden.io/item-details/${item.tokenMint}`,
+    }));
+  } catch (error) {
+    console.error('Magic Eden NFTs error:', error);
+    return [];
+  }
+}
+
+// ============================================
+// Fallback Mock Data (for demo/testing)
+// ============================================
+const FALLBACK_COLLECTIONS: Record<string, NFTCollection[]> = {
   ethereum: [
     {
       address: '0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D',
@@ -61,19 +310,6 @@ const MOCK_COLLECTIONS: Record<string, NFTCollection[]> = {
       volume24h: '245.8',
     },
     {
-      address: '0x60E4d786628Fea6478F785A6d7e704777c86a7c6',
-      name: 'Mutant Ape Yacht Club',
-      symbol: 'MAYC',
-      description: 'Mutant Apes from the BAYC collection',
-      image: '🧟',
-      chain: 'ethereum',
-      floorPrice: '5.2',
-      currency: 'ETH',
-      totalSupply: 20000,
-      owners: 12543,
-      volume24h: '89.3',
-    },
-    {
       address: '0xED5AF388653567Af2F388E6224dC7C4b3241C544',
       name: 'Azuki',
       symbol: 'AZUKI',
@@ -87,67 +323,9 @@ const MOCK_COLLECTIONS: Record<string, NFTCollection[]> = {
       volume24h: '156.2',
     },
   ],
-  arbitrum: [
-    {
-      address: '0x17dacad7975960833f374622fad08b90ed67d1b5',
-      name: 'Smol Brains',
-      symbol: 'SMOL',
-      description: 'Smol Brains are a dynamically generated NFT collection',
-      image: '🧠',
-      chain: 'arbitrum',
-      floorPrice: '0.12',
-      currency: 'ETH',
-      totalSupply: 13421,
-      owners: 3245,
-      volume24h: '12.5',
-    },
-    {
-      address: '0x3a8778a58993ba4b941f85684d74750043a4bb5f',
-      name: 'Tales of Elleria',
-      symbol: 'HEROES',
-      description: 'Play-to-earn RPG heroes on Arbitrum',
-      image: '⚔️',
-      chain: 'arbitrum',
-      floorPrice: '0.08',
-      currency: 'ETH',
-      totalSupply: 8000,
-      owners: 2100,
-      volume24h: '5.2',
-    },
-  ],
-  base: [
-    {
-      address: '0xd4307e0acd12cf46fd6cf93bc264f5d5d1598792',
-      name: 'Base, Pair',
-      symbol: 'BASE',
-      description: 'The official Base NFT collection',
-      image: '🔷',
-      chain: 'base',
-      floorPrice: '0.025',
-      currency: 'ETH',
-      totalSupply: 10000,
-      owners: 6234,
-      volume24h: '8.9',
-    },
-  ],
-  polygon: [
-    {
-      address: '0x22d5f9B75c524Fec1D6619787e582644CD4D7422',
-      name: 'y00ts',
-      symbol: 'Y00TS',
-      description: 'y00ts migrated to Polygon',
-      image: '👽',
-      chain: 'polygon',
-      floorPrice: '320',
-      currency: 'MATIC',
-      totalSupply: 15000,
-      owners: 8765,
-      volume24h: '45000',
-    },
-  ],
   solana: [
     {
-      address: 'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+      address: 'mad_lads',
       name: 'Mad Lads',
       symbol: 'MAD',
       description: 'Mad Lads by Backpack',
@@ -158,19 +336,6 @@ const MOCK_COLLECTIONS: Record<string, NFTCollection[]> = {
       totalSupply: 10000,
       owners: 4532,
       volume24h: '2340',
-    },
-    {
-      address: 'J1S9H3QjnRtBbbuD4HjPV6RpRhwuk4zKbxsnCHuTgh9w',
-      name: 'Okay Bears',
-      symbol: 'OKAY',
-      description: 'Okay Bears is a culture shift',
-      image: '🐻',
-      chain: 'solana',
-      floorPrice: '32',
-      currency: 'SOL',
-      totalSupply: 10000,
-      owners: 5123,
-      volume24h: '890',
     },
   ],
   sui: [
@@ -190,65 +355,29 @@ const MOCK_COLLECTIONS: Record<string, NFTCollection[]> = {
   ],
 };
 
-const MOCK_NFTS: Record<string, NFTItem[]> = {
-  ethereum: [
-    {
-      id: '1234',
-      name: 'Bored Ape #1234',
-      description: 'A unique Bored Ape',
-      image: '🦍',
-      collection: 'Bored Ape Yacht Club',
-      chain: 'ethereum',
-      price: '32.5',
-      currency: 'ETH',
-      owner: '0x1234...5678',
-      marketplace: 'OpenSea',
-      attributes: [
-        { trait_type: 'Background', value: 'Blue' },
-        { trait_type: 'Fur', value: 'Golden' },
-      ],
-    },
-    {
-      id: '5678',
-      name: 'Azuki #5678',
-      description: 'A unique Azuki character',
-      image: '🎌',
-      collection: 'Azuki',
-      chain: 'ethereum',
-      price: '12.8',
-      currency: 'ETH',
-      owner: '0xabcd...efgh',
-      marketplace: 'Blur',
-    },
-  ],
-  solana: [
-    {
-      id: 'mad123',
-      name: 'Mad Lad #123',
-      description: 'A mad lad from Backpack',
-      image: '😎',
-      collection: 'Mad Lads',
-      chain: 'solana',
-      price: '155',
-      currency: 'SOL',
-      owner: 'Abc1...xyz9',
-      marketplace: 'Magic Eden',
-    },
-  ],
-};
-
 // ============================================
-// API Functions
+// Public API Functions
 // ============================================
 
 export async function getCollections(chainKey: NFTChainKey): Promise<NFTCollection[]> {
   try {
-    // In production, call actual marketplace APIs
-    // For now, return mock data
-    return MOCK_COLLECTIONS[chainKey] || [];
+    // EVM chains - use Reservoir
+    if (RESERVOIR_BASE_URLS[chainKey]) {
+      const collections = await fetchReservoirCollections(chainKey);
+      if (collections.length > 0) return collections;
+    }
+
+    // Solana - use Magic Eden
+    if (chainKey === 'solana') {
+      const collections = await fetchMagicEdenCollections();
+      if (collections.length > 0) return collections;
+    }
+
+    // Fallback to mock data
+    return FALLBACK_COLLECTIONS[chainKey] || [];
   } catch (error) {
     console.error('Failed to fetch collections:', error);
-    return MOCK_COLLECTIONS[chainKey] || [];
+    return FALLBACK_COLLECTIONS[chainKey] || [];
   }
 }
 
@@ -258,8 +387,17 @@ export async function getCollectionNFTs(
   limit = 20
 ): Promise<NFTItem[]> {
   try {
-    // In production, call actual marketplace APIs
-    return MOCK_NFTS[chainKey] || [];
+    // EVM chains - use Reservoir
+    if (RESERVOIR_BASE_URLS[chainKey]) {
+      return await fetchReservoirNFTs(chainKey, collectionAddress, limit);
+    }
+
+    // Solana - use Magic Eden
+    if (chainKey === 'solana') {
+      return await fetchMagicEdenNFTs(collectionAddress, limit);
+    }
+
+    return [];
   } catch (error) {
     console.error('Failed to fetch NFTs:', error);
     return [];
@@ -268,7 +406,17 @@ export async function getCollectionNFTs(
 
 export async function getTrendingNFTs(chainKey: NFTChainKey): Promise<NFTItem[]> {
   try {
-    return MOCK_NFTS[chainKey] || [];
+    // EVM chains - use Reservoir
+    if (RESERVOIR_BASE_URLS[chainKey]) {
+      return await fetchReservoirNFTs(chainKey, undefined, 20);
+    }
+
+    // Solana - use Magic Eden
+    if (chainKey === 'solana') {
+      return await fetchMagicEdenNFTs(undefined, 20);
+    }
+
+    return [];
   } catch (error) {
     console.error('Failed to fetch trending NFTs:', error);
     return [];
@@ -280,9 +428,37 @@ export async function getUserNFTs(
   userAddress: string
 ): Promise<NFTItem[]> {
   try {
-    // In production, call actual APIs
-    // Return empty for demo
-    return [];
+    const baseUrl = RESERVOIR_BASE_URLS[chainKey];
+    if (!baseUrl) return [];
+
+    const response = await fetch(
+      `${baseUrl}/users/${userAddress}/tokens/v10?limit=50`,
+      {
+        headers: {
+          'accept': 'application/json',
+          'x-api-key': process.env.RESERVOIR_API_KEY || 'demo-api-key',
+        },
+      }
+    );
+
+    if (!response.ok) return [];
+
+    const data = await response.json();
+    
+    return (data.tokens || []).map((t: any) => ({
+      id: `${t.token?.contract}-${t.token?.tokenId}`,
+      tokenId: t.token?.tokenId || '',
+      name: t.token?.name || `#${t.token?.tokenId}`,
+      description: t.token?.description || '',
+      image: t.token?.image || '🖼️',
+      collection: t.token?.collection?.name || 'Unknown',
+      collectionAddress: t.token?.contract || '',
+      chain: chainKey,
+      price: t.market?.floorAsk?.price?.amount?.decimal?.toFixed(4) || 'Not listed',
+      currency: CURRENCY_MAP[chainKey],
+      owner: userAddress,
+      marketplace: '',
+    }));
   } catch (error) {
     console.error('Failed to fetch user NFTs:', error);
     return [];
@@ -295,8 +471,43 @@ export async function getNFTDetails(
   tokenId: string
 ): Promise<NFTItem | null> {
   try {
-    const nfts = MOCK_NFTS[chainKey] || [];
-    return nfts.find(n => n.id === tokenId) || null;
+    const baseUrl = RESERVOIR_BASE_URLS[chainKey];
+    if (!baseUrl) return null;
+
+    const response = await fetch(
+      `${baseUrl}/tokens/v7?tokens=${collectionAddress}:${tokenId}&includeAttributes=true`,
+      {
+        headers: {
+          'accept': 'application/json',
+          'x-api-key': process.env.RESERVOIR_API_KEY || 'demo-api-key',
+        },
+      }
+    );
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    const t = data.tokens?.[0];
+    if (!t) return null;
+
+    return {
+      id: `${t.token?.contract}-${t.token?.tokenId}`,
+      tokenId: t.token?.tokenId || '',
+      name: t.token?.name || `#${t.token?.tokenId}`,
+      description: t.token?.description || '',
+      image: t.token?.image || '🖼️',
+      collection: t.token?.collection?.name || 'Unknown',
+      collectionAddress: t.token?.contract || '',
+      chain: chainKey,
+      price: t.market?.floorAsk?.price?.amount?.decimal?.toFixed(4) || '0',
+      currency: CURRENCY_MAP[chainKey],
+      owner: t.token?.owner || 'Unknown',
+      marketplace: t.market?.floorAsk?.source?.name || '',
+      attributes: (t.token?.attributes || []).map((a: any) => ({
+        trait_type: a.key,
+        value: a.value,
+      })),
+    };
   } catch (error) {
     console.error('Failed to fetch NFT details:', error);
     return null;
@@ -308,39 +519,31 @@ export function getMarketplacesForChain(chainKey: NFTChainKey) {
 }
 
 // ============================================
-// Transaction Helpers (Mock)
+// Transaction Helpers
 // ============================================
 
 export interface BuyNFTParams {
   chain: string;
-  collection: string;
+  collectionAddress: string;
   tokenId: string;
-  price: string;
-  currency: string;
+  buyer: string;
 }
 
-export async function prepareBuyTransaction(params: BuyNFTParams) {
-  // In production, prepare actual transaction data
-  return {
-    to: params.collection,
-    value: params.price,
-    data: '0x', // Actual calldata would go here
-  };
-}
+export async function getBuyTransaction(params: BuyNFTParams) {
+  const { chain, collectionAddress, tokenId, buyer } = params;
 
-export async function prepareListTransaction(params: NFTListingParams) {
-  // In production, prepare actual listing transaction
-  return {
-    marketplace: 'OpenSea',
-    approval: {
-      to: params.nftAddress,
-      data: '0x', // Approval calldata
-    },
-    listing: {
-      price: params.price,
-      currency: params.currency,
-      expiration: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-    },
-  };
-}
+  // For EVM chains, use Reservoir
+  if (RESERVOIR_BASE_URLS[chain]) {
+    return await getReservoirBuyPath(chain, collectionAddress, tokenId, buyer);
+  }
 
+  // For Solana, return Magic Eden URL (client-side redirect)
+  if (chain === 'solana') {
+    return {
+      type: 'redirect',
+      url: `https://magiceden.io/item-details/${tokenId}`,
+    };
+  }
+
+  return null;
+}

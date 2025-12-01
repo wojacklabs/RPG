@@ -4,6 +4,8 @@ import {
   getCollectionNFTs, 
   getTrendingNFTs,
   getNFTDetails,
+  getUserNFTs,
+  getBuyTransaction,
 } from '@/lib/services/nftService';
 import { type NFTChainKey } from '@/lib/chains';
 
@@ -41,6 +43,15 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ nft });
       }
 
+      case 'user': {
+        const address = searchParams.get('address');
+        if (!address) {
+          return NextResponse.json({ error: 'Missing user address' }, { status: 400 });
+        }
+        const nfts = await getUserNFTs(chain, address);
+        return NextResponse.json({ nfts });
+      }
+
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
@@ -50,3 +61,39 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { action, chain, collectionAddress, tokenId, buyer } = body;
+
+    if (action === 'buy') {
+      if (!chain || !collectionAddress || !tokenId || !buyer) {
+        return NextResponse.json(
+          { error: 'Missing required parameters' },
+          { status: 400 }
+        );
+      }
+
+      const txData = await getBuyTransaction({
+        chain,
+        collectionAddress,
+        tokenId,
+        buyer,
+      });
+
+      if (!txData) {
+        return NextResponse.json(
+          { error: 'Failed to prepare buy transaction' },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({ transaction: txData });
+    }
+
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+  } catch (error) {
+    console.error('NFT POST API error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

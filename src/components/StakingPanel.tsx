@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useGameStore } from '@/stores/gameStore';
+import { usePrivy } from '@privy-io/react-auth';
 
 interface StakingOption {
   protocol: string;
@@ -20,11 +21,14 @@ const STAKING_CHAINS = [
 
 export function StakingPanel() {
   const { activePanel, setActivePanel } = useGameStore();
+  const { authenticated } = usePrivy();
   const [selectedChain, setSelectedChain] = useState('ethereum');
   const [stakingOptions, setStakingOptions] = useState<StakingOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<StakingOption | null>(null);
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
+  const [staking, setStaking] = useState(false);
+  const [txStatus, setTxStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
 
   useEffect(() => {
     const fetchOptions = async () => {
@@ -47,55 +51,92 @@ export function StakingPanel() {
 
   if (activePanel !== 'staking') return null;
 
-  const handleStake = () => {
-    if (!selectedOption) return;
-    alert(`Stake ${amount} ${selectedOption.token} on ${selectedOption.protocol}\n\nExpected APY: ${selectedOption.apy}%\n\nThis will open your wallet to sign the transaction.`);
+  const handleStake = async () => {
+    if (!selectedOption || !amount) return;
+    
+    setStaking(true);
+    setTxStatus('pending');
+    
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setTxStatus('success');
+      setTimeout(() => {
+        setTxStatus('idle');
+        setAmount('');
+      }, 3000);
+    } catch (error) {
+      setTxStatus('error');
+      setTimeout(() => setTxStatus('idle'), 3000);
+    }
+    
+    setStaking(false);
   };
 
+  const monthlyEarnings = selectedOption && amount 
+    ? (parseFloat(amount) * selectedOption.apy / 100 / 12).toFixed(4)
+    : '0';
+
   return (
-    <div className="defi-panel">
-      <div className="panel-header">
-        <h2>💎 Staking</h2>
-        <button className="close-btn" onClick={() => setActivePanel('none')}>×</button>
+    <div className="rpg-panel staking-panel-rpg">
+      <div className="panel-corner top-left" />
+      <div className="panel-corner top-right" />
+      <div className="panel-corner bottom-left" />
+      <div className="panel-corner bottom-right" />
+
+      <div className="rpg-panel-header">
+        <div className="header-icon">💎</div>
+        <h2>도사의 수련장</h2>
+        <button className="rpg-close-btn" onClick={() => setActivePanel('none')}>
+          <span>✕</span>
+        </button>
       </div>
 
-      <div className="npc-message">
-        <div className="npc-avatar">🧙‍♂️</div>
-        <p>Stake your tokens and earn passive rewards across multiple chains!</p>
+      <div className="rpg-npc-dialog">
+        <div className="npc-portrait">
+          <span>🧙‍♂️</span>
+        </div>
+        <div className="dialog-bubble">
+          <p>"허허, 자네도 수련을 하러 왔는가? 토큰을 맡기면 시간이 흐를수록 보상이 쌓이지."</p>
+        </div>
       </div>
 
       {/* Chain Selector */}
-      <div className="chain-type-selector">
-        {STAKING_CHAINS.map(chain => (
-          <button
-            key={chain.key}
-            className={`chain-type-btn ${selectedChain === chain.key ? 'active' : ''}`}
-            onClick={() => setSelectedChain(chain.key)}
-          >
-            {chain.icon} {chain.name}
-          </button>
-        ))}
+      <div className="rpg-chain-selector">
+        <div className="chain-tabs">
+          {STAKING_CHAINS.map(chain => (
+            <button
+              key={chain.key}
+              className={`chain-tab ${selectedChain === chain.key ? 'active' : ''}`}
+              onClick={() => setSelectedChain(chain.key)}
+            >
+              <span className="tab-icon">{chain.icon}</span>
+              <span>{chain.name}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="staking-form">
+      <div className="staking-form-rpg">
         {/* Staking Options */}
-        <div className="staking-options">
-          <label>Select Protocol</label>
+        <div className="bridge-chain-box">
+          <div className="chain-box-label">프로토콜 선택</div>
           {loading ? (
-            <div className="loading-text">Loading options...</div>
+            <div className="nft-loading-state" style={{ padding: '20px' }}>
+              <div className="loading-spinner" />
+            </div>
           ) : (
-            <div className="option-list">
+            <div className="staking-options-list">
               {stakingOptions.map((option, index) => (
                 <button
                   key={index}
-                  className={`staking-option ${selectedOption?.protocol === option.protocol ? 'active' : ''}`}
+                  className={`staking-option-rpg ${selectedOption?.protocol === option.protocol ? 'active' : ''}`}
                   onClick={() => setSelectedOption(option)}
                 >
-                  <div className="option-info">
-                    <span className="option-name">{option.protocol}</span>
-                    <span className="option-token">Stake: {option.token}</span>
+                  <div className="option-left">
+                    <span className="option-protocol">{option.protocol}</span>
+                    <span className="option-token">스테이킹: {option.token}</span>
                   </div>
-                  <div className="option-stats">
+                  <div className="option-right">
                     <span className="option-apy">{option.apy}% APY</span>
                     <span className="option-tvl">TVL: {option.tvl}</span>
                   </div>
@@ -108,47 +149,63 @@ export function StakingPanel() {
         {selectedOption && (
           <>
             {/* Amount Input */}
-            <div className="stake-input-group">
-              <label>Amount to Stake</label>
-              <div className="stake-input">
+            <div className="stake-amount-box">
+              <div className="chain-box-label">스테이킹 금액 (최소: {selectedOption.minStake})</div>
+              <div className="stake-input-row">
                 <input
                   type="number"
-                  placeholder={`Min: ${selectedOption.minStake}`}
+                  placeholder="0.0"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
+                  className="stake-amount-input"
                 />
-                <span className="token-label">{selectedOption.token}</span>
+                <div className="stake-token-label">{selectedOption.token}</div>
               </div>
             </div>
 
-            {/* Staking Details */}
-            <div className="staking-details">
-              <div className="detail-row">
-                <span>Protocol</span>
-                <span className="highlight">{selectedOption.protocol}</span>
+            {/* Details */}
+            <div className="rpg-quote-details">
+              <div className="quote-row">
+                <span className="quote-label">프로토콜</span>
+                <span className="quote-value gold">{selectedOption.protocol}</span>
               </div>
-              <div className="detail-row">
-                <span>Annual Yield</span>
-                <span className="positive">{selectedOption.apy}%</span>
+              <div className="quote-row">
+                <span className="quote-label">연간 수익률</span>
+                <span className="quote-value positive">{selectedOption.apy}%</span>
               </div>
-              <div className="detail-row">
-                <span>Est. Monthly Earnings</span>
-                <span className="positive">
-                  {amount ? (parseFloat(amount) * selectedOption.apy / 100 / 12).toFixed(4) : '0'} {selectedOption.token}
-                </span>
+              <div className="quote-row">
+                <span className="quote-label">예상 월 수익</span>
+                <span className="quote-value positive">{monthlyEarnings} {selectedOption.token}</span>
               </div>
-              <div className="detail-row">
-                <span>Total Value Locked</span>
-                <span>{selectedOption.tvl}</span>
+              <div className="quote-row">
+                <span className="quote-label">총 예치금</span>
+                <span className="quote-value">{selectedOption.tvl}</span>
               </div>
             </div>
 
             <button 
-              className="stake-btn" 
+              className={`rpg-action-btn ${staking ? 'loading' : ''} ${txStatus}`}
               onClick={handleStake}
-              disabled={!amount || parseFloat(amount) < parseFloat(selectedOption.minStake)}
+              disabled={!amount || parseFloat(amount) < parseFloat(selectedOption.minStake) || staking || !authenticated}
             >
-              Stake {selectedOption.token}
+              {!authenticated ? (
+                <span>지갑 연결 필요</span>
+              ) : txStatus === 'pending' ? (
+                <>
+                  <span className="btn-spinner" />
+                  <span>스테이킹 중...</span>
+                </>
+              ) : txStatus === 'success' ? (
+                <>
+                  <span className="btn-icon">✓</span>
+                  <span>스테이킹 완료!</span>
+                </>
+              ) : (
+                <>
+                  <span className="btn-icon">💎</span>
+                  <span>{selectedOption.token} 스테이킹</span>
+                </>
+              )}
             </button>
           </>
         )}

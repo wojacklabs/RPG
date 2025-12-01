@@ -1705,3 +1705,1308 @@ html, body {
   z-index: 100;
   box-shadow: 0 4px 12px rgba(80, 192, 112, 0.3);
 }
+
+/* ================================================
+   RPG Style Panels
+   ================================================ */
+
+.rpg-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+  border: 3px solid #c9a227;
+  border-radius: 4px;
+  padding: 0;
+  min-width: 420px;
+  max-width: 500px;
+  max-height: 85vh;
+  overflow: hidden;
+  z-index: 1000;
+  box-shadow: 
+    0 0 0 1px #8b6914,
+    0 0 30px rgba(201, 162, 39, 0.3),
+    inset 0 0 60px rgba(0, 0, 0, 0.5);
+}
+
+.rpg-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: linear-gradient(180deg, rgba(201, 162, 39, 0.15) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Panel Corners */
+.panel-corner {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #c9a227;
+  z-index: 10;
+}
+
+.panel-corner.top-left {
+  top: -3px;
+  left: -3px;
+  border-right: none;
+  border-bottom: none;
+  border-radius: 4px 0 0 0;
+}
+
+.panel-corner.top-right {
+  top: -3px;
+  right: -3px;
+  border-left: none;
+  border-bottom: none;
+  border-radius: 0 4px 0 0;
+}
+
+.panel-corner.bottom-left {
+  bottom: -3px;
+  left: -3px;
+  border-right: none;
+  border-top: none;
+  border-radius: 0 0 0 4px;
+}
+
+.panel-corner.bottom-right {
+  bottom: -3px;
+  right: -3px;
+  border-left: none;
+  border-top: none;
+  border-radius: 0 0 4px 0;
+}
+
+/* RPG Panel Header */
+.rpg-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(90deg, rgba(139, 105, 20, 0.4) 0%, rgba(139, 105, 20, 0.1) 50%, rgba(139, 105, 20, 0.4) 100%);
+  border-bottom: 2px solid #8b6914;
+}
+
+.rpg-panel-header .header-icon {
+  font-size: 1.8rem;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+}
+
+.rpg-panel-header h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #f4d03f;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  font-family: 'Times New Roman', serif;
+  letter-spacing: 0.05em;
+}
+
+.rpg-close-btn {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(180deg, #8b2020 0%, #5a1010 100%);
+  border: 2px solid #c04040;
+  border-radius: 4px;
+  color: #ffd0d0;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.rpg-close-btn:hover {
+  background: linear-gradient(180deg, #a02020 0%, #701010 100%);
+  border-color: #ff6060;
+  color: white;
+}
+
+/* NPC Dialog */
+.rpg-npc-dialog {
+  display: flex;
+  gap: 16px;
+  padding: 16px 20px;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(139, 105, 20, 0.3);
+}
+
+.npc-portrait {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(180deg, #2a2a4a 0%, #1a1a2e 100%);
+  border: 2px solid #8b6914;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.dialog-bubble {
+  flex: 1;
+  background: rgba(244, 208, 63, 0.1);
+  border: 1px solid rgba(244, 208, 63, 0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  position: relative;
+}
+
+.dialog-bubble::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 8px solid transparent;
+  border-right-color: rgba(244, 208, 63, 0.3);
+}
+
+.dialog-bubble p {
+  margin: 0;
+  color: #e8d5a3;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+/* Chain Selector */
+.rpg-chain-selector {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(139, 105, 20, 0.3);
+}
+
+.chain-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.chain-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(26, 26, 46, 0.8);
+  border: 2px solid rgba(139, 105, 20, 0.3);
+  border-radius: 4px;
+  color: #a0a0b0;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chain-tab:hover {
+  background: rgba(139, 105, 20, 0.2);
+  border-color: rgba(139, 105, 20, 0.5);
+  color: #f4d03f;
+}
+
+.chain-tab.active {
+  background: linear-gradient(180deg, rgba(139, 105, 20, 0.4) 0%, rgba(139, 105, 20, 0.2) 100%);
+  border-color: #c9a227;
+  color: #f4d03f;
+  box-shadow: 0 0 10px rgba(201, 162, 39, 0.3);
+}
+
+.chain-tab .tab-icon {
+  font-size: 1.1rem;
+}
+
+.chain-network-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.network-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(26, 26, 46, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: #a0a0b0;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.network-btn:hover {
+  background: rgba(64, 192, 192, 0.1);
+  border-color: rgba(64, 192, 192, 0.3);
+  color: var(--cyan);
+}
+
+.network-btn.active {
+  background: rgba(64, 192, 192, 0.2);
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+.network-btn .network-icon {
+  font-size: 1rem;
+}
+
+/* Protocol Badge */
+.rpg-protocol-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 20px;
+  padding: 8px 16px;
+  background: linear-gradient(90deg, rgba(80, 192, 112, 0.1) 0%, rgba(80, 192, 112, 0.2) 50%, rgba(80, 192, 112, 0.1) 100%);
+  border: 1px solid rgba(80, 192, 112, 0.4);
+  border-radius: 4px;
+}
+
+.rpg-protocol-badge .badge-icon {
+  font-size: 1.2rem;
+}
+
+.rpg-protocol-badge .badge-text {
+  color: var(--green);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Swap Form */
+.rpg-swap-form {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.swap-token-box {
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(139, 105, 20, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+  transition: all 0.2s;
+}
+
+.swap-token-box:focus-within {
+  border-color: #c9a227;
+  box-shadow: 0 0 15px rgba(201, 162, 39, 0.2);
+}
+
+.swap-token-box.from {
+  background: linear-gradient(180deg, rgba(192, 64, 64, 0.1) 0%, rgba(0, 0, 0, 0.3) 100%);
+}
+
+.swap-token-box.to {
+  background: linear-gradient(180deg, rgba(80, 192, 112, 0.1) 0%, rgba(0, 0, 0, 0.3) 100%);
+}
+
+.token-box-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.token-box-header .token-label {
+  color: #a0a0b0;
+  font-size: 0.85rem;
+}
+
+.token-box-header .token-balance {
+  color: #707080;
+  font-size: 0.8rem;
+}
+
+.token-input-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.token-amount-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #f0f0f0;
+  font-size: 1.8rem;
+  font-weight: 500;
+  outline: none;
+  min-width: 0;
+}
+
+.token-amount-input::placeholder {
+  color: #505060;
+}
+
+.token-selector {
+  flex-shrink: 0;
+}
+
+.token-selector select {
+  background: rgba(139, 105, 20, 0.3);
+  border: 2px solid #8b6914;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #f4d03f;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+}
+
+.token-selector select:hover {
+  background: rgba(139, 105, 20, 0.5);
+}
+
+/* Switch Button */
+.swap-switch-btn {
+  align-self: center;
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(180deg, #2a2a4a 0%, #1a1a2e 100%);
+  border: 2px solid #8b6914;
+  border-radius: 50%;
+  color: #f4d03f;
+  font-size: 1.4rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin: -8px 0;
+  z-index: 1;
+}
+
+.swap-switch-btn:hover {
+  background: linear-gradient(180deg, #3a3a5a 0%, #2a2a4e 100%);
+  border-color: #c9a227;
+  transform: rotate(180deg);
+}
+
+/* Quote Details */
+.rpg-quote-details {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(139, 105, 20, 0.2);
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+
+.quote-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 0.85rem;
+}
+
+.quote-row .quote-label {
+  color: #707080;
+}
+
+.quote-row .quote-value {
+  color: #f0f0f0;
+  font-weight: 500;
+}
+
+.quote-row .quote-value.positive {
+  color: var(--green);
+}
+
+.quote-row .quote-value.negative {
+  color: #ff6060;
+}
+
+/* RPG Action Button */
+.rpg-action-btn {
+  width: 100%;
+  padding: 16px 24px;
+  background: linear-gradient(180deg, #c04040 0%, #802020 100%);
+  border: 2px solid #f4d03f;
+  border-radius: 8px;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.2s;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: 
+    0 4px 15px rgba(192, 64, 64, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.rpg-action-btn:hover:not(:disabled) {
+  background: linear-gradient(180deg, #d05050 0%, #903030 100%);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 6px 20px rgba(192, 64, 64, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.rpg-action-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.rpg-action-btn:disabled {
+  background: linear-gradient(180deg, #404050 0%, #303040 100%);
+  border-color: #505060;
+  color: #707080;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.rpg-action-btn .btn-icon {
+  font-size: 1.3rem;
+}
+
+.rpg-action-btn .btn-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.rpg-action-btn.success {
+  background: linear-gradient(180deg, #40a050 0%, #208030 100%);
+  border-color: #60d070;
+}
+
+.rpg-action-btn.error {
+  background: linear-gradient(180deg, #a04040 0%, #602020 100%);
+}
+
+/* ================================================
+   NFT Panel RPG Styles
+   ================================================ */
+
+.nft-panel-rpg {
+  min-width: 520px;
+  max-width: 600px;
+}
+
+.nft-view-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 20px 16px;
+  border-bottom: 1px solid rgba(139, 105, 20, 0.3);
+}
+
+.nft-tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(26, 26, 46, 0.8);
+  border: 2px solid rgba(139, 105, 20, 0.3);
+  border-radius: 4px;
+  color: #a0a0b0;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.nft-tab-btn:hover {
+  background: rgba(139, 105, 20, 0.2);
+  border-color: rgba(139, 105, 20, 0.5);
+  color: #f4d03f;
+}
+
+.nft-tab-btn.active {
+  background: linear-gradient(180deg, rgba(139, 105, 20, 0.4) 0%, rgba(139, 105, 20, 0.2) 100%);
+  border-color: #c9a227;
+  color: #f4d03f;
+}
+
+.nft-content-area {
+  padding: 20px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.nft-loading-state,
+.nft-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #707080;
+  gap: 16px;
+}
+
+.nft-loading-state span,
+.nft-empty-state span {
+  font-size: 3rem;
+  opacity: 0.5;
+}
+
+.nft-collections-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.nft-collection-card-rpg {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(26, 26, 46, 0.8) 0%, rgba(15, 15, 26, 0.9) 100%);
+  border: 2px solid rgba(139, 105, 20, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.nft-collection-card-rpg:hover {
+  border-color: #c9a227;
+  background: linear-gradient(180deg, rgba(139, 105, 20, 0.2) 0%, rgba(26, 26, 46, 0.9) 100%);
+  transform: translateX(4px);
+}
+
+.collection-thumbnail {
+  width: 72px;
+  height: 72px;
+  background: linear-gradient(135deg, rgba(201, 162, 39, 0.2) 0%, rgba(64, 192, 192, 0.2) 100%);
+  border: 2px solid #8b6914;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  flex-shrink: 0;
+}
+
+.collection-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.collection-details h3 {
+  margin: 0;
+  color: #f0f0f0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.collection-symbol {
+  color: #707080;
+  font-size: 0.8rem;
+}
+
+.collection-stats-row {
+  display: flex;
+  gap: 24px;
+  margin-top: 8px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-item .stat-label {
+  color: #606070;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+
+.stat-item .stat-value {
+  color: #f0f0f0;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.stat-item .stat-value.gold {
+  color: #f4d03f;
+}
+
+/* Browse Area */
+.nft-browse-area {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.browse-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.back-btn-rpg {
+  padding: 6px 12px;
+  background: rgba(26, 26, 46, 0.8);
+  border: 1px solid rgba(139, 105, 20, 0.3);
+  border-radius: 4px;
+  color: #a0a0b0;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.back-btn-rpg:hover {
+  background: rgba(139, 105, 20, 0.2);
+  border-color: #c9a227;
+  color: #f4d03f;
+}
+
+.browse-header h3 {
+  margin: 0;
+  color: #f4d03f;
+  font-size: 1rem;
+}
+
+.nft-items-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.nft-item-card-rpg {
+  background: linear-gradient(180deg, rgba(26, 26, 46, 0.8) 0%, rgba(15, 15, 26, 0.9) 100%);
+  border: 2px solid rgba(139, 105, 20, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.nft-item-card-rpg:hover {
+  border-color: #c9a227;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+}
+
+.nft-item-image {
+  width: 100%;
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, rgba(201, 162, 39, 0.15) 0%, rgba(64, 192, 192, 0.15) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+}
+
+.nft-item-info {
+  padding: 12px;
+}
+
+.nft-item-info h4 {
+  margin: 0 0 4px;
+  color: #f0f0f0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.nft-item-collection {
+  color: #707080;
+  font-size: 0.75rem;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.nft-item-price {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.price-value {
+  color: #f4d03f;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.marketplace-tag {
+  background: rgba(64, 192, 192, 0.2);
+  color: var(--cyan);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+}
+
+/* NFT Modal */
+.nft-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  backdrop-filter: blur(4px);
+}
+
+.nft-modal-rpg {
+  position: relative;
+  background: linear-gradient(180deg, #1a1a2e 0%, #0f0f1a 100%);
+  border: 3px solid #c9a227;
+  border-radius: 8px;
+  padding: 24px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 
+    0 0 0 1px #8b6914,
+    0 0 40px rgba(201, 162, 39, 0.4);
+}
+
+.nft-modal-rpg .modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
+.modal-nft-image {
+  width: 100%;
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, rgba(201, 162, 39, 0.15) 0%, rgba(64, 192, 192, 0.15) 100%);
+  border: 2px solid #8b6914;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8rem;
+  margin-bottom: 20px;
+}
+
+.modal-nft-info h3 {
+  margin: 0 0 4px;
+  color: #f4d03f;
+  font-size: 1.3rem;
+}
+
+.modal-collection {
+  color: #707080;
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+}
+
+.modal-details {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(139, 105, 20, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.modal-details .detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(139, 105, 20, 0.1);
+}
+
+.modal-details .detail-item:last-child {
+  border-bottom: none;
+}
+
+.modal-details .label {
+  color: #707080;
+  font-size: 0.85rem;
+}
+
+.modal-details .value {
+  color: #f0f0f0;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.modal-details .value.gold {
+  color: #f4d03f;
+  font-size: 1rem;
+}
+
+.modal-attributes {
+  margin-bottom: 20px;
+}
+
+.modal-attributes h4 {
+  color: #a0a0b0;
+  font-size: 0.85rem;
+  margin: 0 0 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.attributes-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.attribute-tag {
+  background: rgba(64, 192, 192, 0.1);
+  border: 1px solid rgba(64, 192, 192, 0.3);
+  border-radius: 6px;
+  padding: 8px 12px;
+  text-align: center;
+}
+
+.attribute-tag .attr-type {
+  display: block;
+  color: var(--cyan);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.attribute-tag .attr-value {
+  display: block;
+  color: #f0f0f0;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* ================================================
+   Bridge Panel RPG Styles
+   ================================================ */
+
+.bridge-panel-rpg {
+  min-width: 480px;
+}
+
+.bridge-form-rpg {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.bridge-chain-box {
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(139, 105, 20, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.chain-box-label {
+  color: #a0a0b0;
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.chain-grid-rpg {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.chain-btn-rpg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px;
+  background: rgba(26, 26, 46, 0.8);
+  border: 2px solid rgba(139, 105, 20, 0.2);
+  border-radius: 6px;
+  color: #a0a0b0;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.chain-btn-rpg .chain-icon {
+  font-size: 1.3rem;
+}
+
+.chain-btn-rpg:hover:not(.disabled) {
+  background: rgba(139, 105, 20, 0.2);
+  border-color: rgba(139, 105, 20, 0.5);
+  color: #f4d03f;
+}
+
+.chain-btn-rpg.active {
+  background: linear-gradient(180deg, rgba(192, 64, 64, 0.3) 0%, rgba(192, 64, 64, 0.1) 100%);
+  border-color: #c04040;
+  color: #ff8080;
+}
+
+.chain-btn-rpg.active.to {
+  background: linear-gradient(180deg, rgba(80, 192, 112, 0.3) 0%, rgba(80, 192, 112, 0.1) 100%);
+  border-color: var(--green);
+  color: #80ff90;
+}
+
+.chain-btn-rpg.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.bridge-switch-btn {
+  align-self: center;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(180deg, #2a2a4a 0%, #1a1a2e 100%);
+  border: 2px solid #8b6914;
+  border-radius: 50%;
+  color: #f4d03f;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin: -8px 0;
+  z-index: 1;
+}
+
+.bridge-switch-btn:hover {
+  background: linear-gradient(180deg, #3a3a5a 0%, #2a2a4e 100%);
+  border-color: #c9a227;
+  transform: rotate(180deg);
+}
+
+.bridge-amount-box {
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(139, 105, 20, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.bridge-input-row {
+  display: flex;
+  gap: 12px;
+}
+
+.bridge-amount-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #f0f0f0;
+  font-size: 1.5rem;
+  font-weight: 500;
+  outline: none;
+}
+
+.bridge-token-select {
+  background: rgba(139, 105, 20, 0.3);
+  border: 2px solid #8b6914;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #f4d03f;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.quote-value.gold {
+  color: #f4d03f !important;
+}
+
+/* ================================================
+   Staking Panel RPG Styles
+   ================================================ */
+
+.staking-panel-rpg {
+  min-width: 460px;
+}
+
+.staking-form-rpg {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.staking-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.staking-option-rpg {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: rgba(26, 26, 46, 0.8);
+  border: 2px solid rgba(139, 105, 20, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.staking-option-rpg:hover {
+  background: rgba(139, 105, 20, 0.15);
+  border-color: rgba(139, 105, 20, 0.4);
+}
+
+.staking-option-rpg.active {
+  background: linear-gradient(180deg, rgba(139, 105, 20, 0.3) 0%, rgba(139, 105, 20, 0.15) 100%);
+  border-color: #c9a227;
+}
+
+.option-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.option-protocol {
+  color: #f0f0f0;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.option-token {
+  color: #707080;
+  font-size: 0.8rem;
+}
+
+.option-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.option-apy {
+  color: var(--green);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.option-tvl {
+  color: #707080;
+  font-size: 0.8rem;
+}
+
+.stake-amount-box {
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(139, 105, 20, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.stake-input-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.stake-amount-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #f0f0f0;
+  font-size: 1.5rem;
+  font-weight: 500;
+  outline: none;
+}
+
+.stake-token-label {
+  background: rgba(139, 105, 20, 0.3);
+  border: 2px solid #8b6914;
+  border-radius: 8px;
+  padding: 10px 16px;
+  color: #f4d03f;
+  font-weight: 600;
+}
+
+/* ================================================
+   Liquidity Panel RPG Styles
+   ================================================ */
+
+.liquidity-panel-rpg {
+  min-width: 480px;
+}
+
+.liquidity-form-rpg {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pool-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.pool-option-rpg {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: rgba(26, 26, 46, 0.8);
+  border: 2px solid rgba(139, 105, 20, 0.2);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pool-option-rpg:hover {
+  background: rgba(139, 105, 20, 0.15);
+  border-color: rgba(139, 105, 20, 0.4);
+}
+
+.pool-option-rpg.active {
+  background: linear-gradient(180deg, rgba(139, 105, 20, 0.3) 0%, rgba(139, 105, 20, 0.15) 100%);
+  border-color: #c9a227;
+}
+
+.pool-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pool-pair {
+  color: #f0f0f0;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.pool-protocol {
+  color: #707080;
+  font-size: 0.8rem;
+}
+
+.pool-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.pool-apy {
+  color: var(--green);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.pool-tvl {
+  color: #707080;
+  font-size: 0.8rem;
+}
+
+.lp-inputs-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lp-input-box {
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(139, 105, 20, 0.3);
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.lp-input-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.lp-amount-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #f0f0f0;
+  font-size: 1.3rem;
+  font-weight: 500;
+  outline: none;
+}
+
+.lp-plus-divider {
+  text-align: center;
+  color: #f4d03f;
+  font-size: 1.5rem;
+  margin: -8px 0;
+}
+
+/* Buy Error/Success Messages */
+.buy-error-message {
+  background: rgba(192, 64, 64, 0.2);
+  border: 1px solid #c04040;
+  border-radius: 6px;
+  padding: 10px 14px;
+  color: #ff8080;
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.buy-success-message {
+  background: rgba(80, 192, 112, 0.2);
+  border: 1px solid var(--green);
+  border-radius: 6px;
+  padding: 10px 14px;
+  color: #80ff90;
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+/* Modal Actions */
+.modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Secondary Button */
+.rpg-secondary-btn {
+  width: 100%;
+  padding: 12px 20px;
+  background: linear-gradient(180deg, rgba(64, 192, 192, 0.2) 0%, rgba(64, 192, 192, 0.1) 100%);
+  border: 2px solid var(--cyan);
+  border-radius: 8px;
+  color: var(--cyan);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.rpg-secondary-btn:hover {
+  background: linear-gradient(180deg, rgba(64, 192, 192, 0.3) 0%, rgba(64, 192, 192, 0.15) 100%);
+  transform: translateY(-1px);
+}
+
+/* NFT Image Loading */
+.nft-item-image img,
+.collection-thumbnail img,
+.modal-nft-image img {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Scrollbar for NFT content */
+.nft-content-area::-webkit-scrollbar {
+  width: 8px;
+}
+
+.nft-content-area::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.nft-content-area::-webkit-scrollbar-thumb {
+  background: rgba(139, 105, 20, 0.5);
+  border-radius: 4px;
+}
+
+.nft-content-area::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 105, 20, 0.7);
+}
