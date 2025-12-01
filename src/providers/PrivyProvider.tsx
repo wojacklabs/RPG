@@ -4,9 +4,8 @@ import { PrivyProvider as PrivyAuthProvider } from '@privy-io/react-auth';
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { wagmiConfig } from '@/lib/wagmiConfig';
-import { megaethTestnet } from '@/lib/chains';
 import { ReactNode, useState } from 'react';
-import { mainnet } from 'wagmi/chains';
+import { mainnet, arbitrum, base, polygon } from 'wagmi/chains';
 
 interface ProvidersProps {
   children: ReactNode;
@@ -17,19 +16,19 @@ export function Providers({ children }: ProvidersProps) {
 
   return (
     <PrivyAuthProvider
-      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || 'clpispdty00ycl80fpueukbhl'}
+      appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || ''}
       config={{
         loginMethods: ['email', 'wallet', 'google', 'discord'],
         appearance: {
           theme: 'dark',
           accentColor: '#E8B838',
-          showWalletLoginFirst: false,
+          showWalletLoginFirst: true,
         },
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',
         },
         defaultChain: mainnet,
-        supportedChains: [mainnet, megaethTestnet],
+        supportedChains: [mainnet, arbitrum, base, polygon],
       }}
     >
       <QueryClientProvider client={queryClient}>

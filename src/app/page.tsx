@@ -56,7 +56,6 @@ export default function Home() {
 
     const handleOpenPanel = (e: CustomEvent) => {
       const panelType = e.detail as string;
-      // Only open panels if wallet is connected
       if (!authenticated) {
         return;
       }

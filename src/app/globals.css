@@ -1690,3 +1690,18 @@ html, body {
   color: var(--text);
   font-weight: 500;
 }
+/* Single Player Banner */
+.single-player-banner {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(80, 192, 112, 0.9);
+  color: #1a1a2e;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(80, 192, 112, 0.3);
+}
