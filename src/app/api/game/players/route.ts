@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAllPlayers } from '@/lib/services/gameDataService';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const players = await getAllPlayers();

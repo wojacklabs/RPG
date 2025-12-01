@@ -4,8 +4,10 @@ import {
   getCollectionNFTs, 
   getTrendingNFTs,
   getNFTDetails,
-  type NFTChainKey 
 } from '@/lib/services/nftService';
+import { type NFTChainKey } from '@/lib/chains';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;

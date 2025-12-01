@@ -191,12 +191,18 @@ export class BootScene extends Phaser.Scene {
       }
     }
 
-    g.generateTexture('player_temp', fw * 4, fh * 4);
+    g.generateTexture('player', fw * 4, fh * 4);
     g.destroy();
 
-    const source = this.textures.get('player_temp').getSourceImage() as HTMLCanvasElement;
-    this.textures.addSpriteSheet('player', source, { frameWidth: fw, frameHeight: fh });
-    this.textures.remove('player_temp');
+    const texture = this.textures.get('player');
+    const frameNames: (string | number)[] = [];
+    for (let dir = 0; dir < 4; dir++) {
+      for (let frame = 0; frame < 4; frame++) {
+        const frameName = dir * 4 + frame;
+        texture.add(frameName, 0, frame * fw, dir * fh, fw, fh);
+        frameNames.push(frameName);
+      }
+    }
   }
 
   private generateNPCSprites(): void {

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSwapQuote, getBridgeQuote, getStakingOptions, getLiquidityPools, getSupportedChains } from '@/lib/services/defiService';
 import { type DefiChainKey } from '@/lib/chains';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
