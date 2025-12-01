@@ -86,7 +86,7 @@ export function LiquidityPanel() {
 
       <div className="rpg-panel-header">
         <div className="header-icon">💰</div>
-        <h2>상단의 금고</h2>
+        <h2>Guild Treasury</h2>
         <button className="rpg-close-btn" onClick={() => setActivePanel('none')}>
           <span>✕</span>
         </button>
@@ -97,11 +97,10 @@ export function LiquidityPanel() {
           <span>🏦</span>
         </div>
         <div className="dialog-bubble">
-          <p>"우리 상단에 유동성을 제공하시면 거래 수수료를 나눠 드리지요. 함께 부를 쌓아보시겠소?"</p>
+          <p>"Provide liquidity to our guild and earn trading fees. Shall we build wealth together?"</p>
         </div>
       </div>
 
-      {/* Chain Selector */}
       <div className="rpg-chain-selector">
         <div className="chain-tabs">
           {LP_CHAINS.map(chain => (
@@ -118,9 +117,8 @@ export function LiquidityPanel() {
       </div>
 
       <div className="liquidity-form-rpg">
-        {/* Pool Selection */}
         <div className="bridge-chain-box">
-          <div className="chain-box-label">풀 선택</div>
+          <div className="chain-box-label">Select Pool</div>
           {loading ? (
             <div className="nft-loading-state" style={{ padding: '20px' }}>
               <div className="loading-spinner" />
@@ -149,10 +147,9 @@ export function LiquidityPanel() {
 
         {selectedPool && (
           <>
-            {/* Token Inputs */}
             <div className="lp-inputs-box">
               <div className="lp-input-box">
-                <div className="chain-box-label">{selectedPool.token0} 금액</div>
+                <div className="chain-box-label">{selectedPool.token0} Amount</div>
                 <div className="lp-input-row">
                   <input
                     type="number"
@@ -168,7 +165,7 @@ export function LiquidityPanel() {
               <div className="lp-plus-divider">+</div>
 
               <div className="lp-input-box">
-                <div className="chain-box-label">{selectedPool.token1} 금액</div>
+                <div className="chain-box-label">{selectedPool.token1} Amount</div>
                 <div className="lp-input-row">
                   <input
                     type="number"
@@ -182,26 +179,25 @@ export function LiquidityPanel() {
               </div>
             </div>
 
-            {/* Pool Details */}
             <div className="rpg-quote-details">
               <div className="quote-row">
-                <span className="quote-label">풀</span>
+                <span className="quote-label">Pool</span>
                 <span className="quote-value gold">{selectedPool.pool}</span>
               </div>
               <div className="quote-row">
-                <span className="quote-label">프로토콜</span>
+                <span className="quote-label">Protocol</span>
                 <span className="quote-value">{selectedPool.protocol}</span>
               </div>
               <div className="quote-row">
-                <span className="quote-label">풀 APY</span>
+                <span className="quote-label">Pool APY</span>
                 <span className="quote-value positive">{selectedPool.apy}%</span>
               </div>
               <div className="quote-row">
-                <span className="quote-label">수수료</span>
+                <span className="quote-label">Pool Fee</span>
                 <span className="quote-value">{selectedPool.fee}%</span>
               </div>
               <div className="quote-row">
-                <span className="quote-label">총 예치금</span>
+                <span className="quote-label">Total Value Locked</span>
                 <span className="quote-value">{selectedPool.tvl}</span>
               </div>
             </div>
@@ -212,21 +208,21 @@ export function LiquidityPanel() {
               disabled={!amount0 || !amount1 || adding || !authenticated}
             >
               {!authenticated ? (
-                <span>지갑 연결 필요</span>
+                <span>Connect Wallet</span>
               ) : txStatus === 'pending' ? (
                 <>
                   <span className="btn-spinner" />
-                  <span>유동성 추가 중...</span>
+                  <span>Adding Liquidity...</span>
                 </>
               ) : txStatus === 'success' ? (
                 <>
                   <span className="btn-icon">✓</span>
-                  <span>유동성 추가 완료!</span>
+                  <span>Liquidity Added!</span>
                 </>
               ) : (
                 <>
                   <span className="btn-icon">💰</span>
-                  <span>유동성 추가</span>
+                  <span>Add Liquidity</span>
                 </>
               )}
             </button>

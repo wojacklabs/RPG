@@ -85,7 +85,7 @@ export function StakingPanel() {
 
       <div className="rpg-panel-header">
         <div className="header-icon">💎</div>
-        <h2>도사의 수련장</h2>
+        <h2>Sage's Sanctum</h2>
         <button className="rpg-close-btn" onClick={() => setActivePanel('none')}>
           <span>✕</span>
         </button>
@@ -96,11 +96,10 @@ export function StakingPanel() {
           <span>🧙‍♂️</span>
         </div>
         <div className="dialog-bubble">
-          <p>"허허, 자네도 수련을 하러 왔는가? 토큰을 맡기면 시간이 흐를수록 보상이 쌓이지."</p>
+          <p>"Ah, you seek enlightenment? Stake your tokens and watch your rewards grow over time."</p>
         </div>
       </div>
 
-      {/* Chain Selector */}
       <div className="rpg-chain-selector">
         <div className="chain-tabs">
           {STAKING_CHAINS.map(chain => (
@@ -117,9 +116,8 @@ export function StakingPanel() {
       </div>
 
       <div className="staking-form-rpg">
-        {/* Staking Options */}
         <div className="bridge-chain-box">
-          <div className="chain-box-label">프로토콜 선택</div>
+          <div className="chain-box-label">Select Protocol</div>
           {loading ? (
             <div className="nft-loading-state" style={{ padding: '20px' }}>
               <div className="loading-spinner" />
@@ -134,7 +132,7 @@ export function StakingPanel() {
                 >
                   <div className="option-left">
                     <span className="option-protocol">{option.protocol}</span>
-                    <span className="option-token">스테이킹: {option.token}</span>
+                    <span className="option-token">Stake: {option.token}</span>
                   </div>
                   <div className="option-right">
                     <span className="option-apy">{option.apy}% APY</span>
@@ -148,9 +146,8 @@ export function StakingPanel() {
 
         {selectedOption && (
           <>
-            {/* Amount Input */}
             <div className="stake-amount-box">
-              <div className="chain-box-label">스테이킹 금액 (최소: {selectedOption.minStake})</div>
+              <div className="chain-box-label">Stake Amount (Min: {selectedOption.minStake})</div>
               <div className="stake-input-row">
                 <input
                   type="number"
@@ -163,22 +160,21 @@ export function StakingPanel() {
               </div>
             </div>
 
-            {/* Details */}
             <div className="rpg-quote-details">
               <div className="quote-row">
-                <span className="quote-label">프로토콜</span>
+                <span className="quote-label">Protocol</span>
                 <span className="quote-value gold">{selectedOption.protocol}</span>
               </div>
               <div className="quote-row">
-                <span className="quote-label">연간 수익률</span>
+                <span className="quote-label">Annual Yield</span>
                 <span className="quote-value positive">{selectedOption.apy}%</span>
               </div>
               <div className="quote-row">
-                <span className="quote-label">예상 월 수익</span>
+                <span className="quote-label">Est. Monthly</span>
                 <span className="quote-value positive">{monthlyEarnings} {selectedOption.token}</span>
               </div>
               <div className="quote-row">
-                <span className="quote-label">총 예치금</span>
+                <span className="quote-label">Total Staked</span>
                 <span className="quote-value">{selectedOption.tvl}</span>
               </div>
             </div>
@@ -189,21 +185,21 @@ export function StakingPanel() {
               disabled={!amount || parseFloat(amount) < parseFloat(selectedOption.minStake) || staking || !authenticated}
             >
               {!authenticated ? (
-                <span>지갑 연결 필요</span>
+                <span>Connect Wallet</span>
               ) : txStatus === 'pending' ? (
                 <>
                   <span className="btn-spinner" />
-                  <span>스테이킹 중...</span>
+                  <span>Staking...</span>
                 </>
               ) : txStatus === 'success' ? (
                 <>
                   <span className="btn-icon">✓</span>
-                  <span>스테이킹 완료!</span>
+                  <span>Staking Complete!</span>
                 </>
               ) : (
                 <>
                   <span className="btn-icon">💎</span>
-                  <span>{selectedOption.token} 스테이킹</span>
+                  <span>Stake {selectedOption.token}</span>
                 </>
               )}
             </button>

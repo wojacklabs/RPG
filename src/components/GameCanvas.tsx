@@ -71,7 +71,7 @@ export function GameCanvas({ onNPCInteraction, onOpenPanel }: GameCanvasProps) {
       {!isLoaded && (
         <div className="loading-overlay">
           <div className="loading-spinner large" />
-          <p>게임 로딩 중...</p>
+          <p>Loading game...</p>
         </div>
       )}
     </div>

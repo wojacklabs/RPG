@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useGameStore } from '@/stores/gameStore';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
 import type { NFTCollection, NFTItem } from '@/lib/services/nftService';
@@ -15,7 +15,7 @@ const CHAIN_OPTIONS = [
 
 export function NFTPanel() {
   const { activePanel, setActivePanel } = useGameStore();
-  const { authenticated, user } = usePrivy();
+  const { authenticated } = usePrivy();
   const { wallets } = useWallets();
   
   const [selectedChain, setSelectedChain] = useState('ethereum');
@@ -32,13 +32,11 @@ export function NFTPanel() {
 
   const walletAddress = wallets?.[0]?.address;
 
-  // Fetch collections when panel opens or chain changes
   useEffect(() => {
     if (activePanel !== 'nft') return;
     fetchCollections();
   }, [activePanel, selectedChain]);
 
-  // Fetch user NFTs when viewing "my" tab
   useEffect(() => {
     if (activePanel !== 'nft' || view !== 'my' || !walletAddress) return;
     fetchMyNFTs();
@@ -95,7 +93,7 @@ export function NFTPanel() {
 
   const handleBuy = async (nft: NFTItem) => {
     if (!authenticated || !walletAddress) {
-      setBuyError('지갑을 먼저 연결해주세요');
+      setBuyError('Please connect your wallet first');
       return;
     }
 
@@ -104,7 +102,6 @@ export function NFTPanel() {
     setBuySuccess(false);
 
     try {
-      // Get buy transaction from API
       const res = await fetch('/api/nft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -125,7 +122,6 @@ export function NFTPanel() {
 
       const txData = data.transaction;
 
-      // Handle redirect (for Solana/Magic Eden)
       if (txData.type === 'redirect') {
         window.open(txData.url, '_blank');
         setBuySuccess(true);
@@ -137,16 +133,13 @@ export function NFTPanel() {
         return;
       }
 
-      // For EVM chains, execute transaction with wallet
       const wallet = wallets?.[0];
       if (!wallet) {
         throw new Error('No wallet connected');
       }
 
-      // Get provider from wallet
       const provider = await wallet.getEthereumProvider();
       
-      // Execute each step in the transaction path
       if (txData.steps) {
         for (const step of txData.steps) {
           for (const item of step.items || []) {
@@ -170,7 +163,6 @@ export function NFTPanel() {
       setTimeout(() => {
         setSelectedNFT(null);
         setBuySuccess(false);
-        // Refresh NFTs
         if (selectedCollection) {
           fetchNFTs(selectedCollection.address);
         }
@@ -178,7 +170,7 @@ export function NFTPanel() {
 
     } catch (error: any) {
       console.error('Buy error:', error);
-      setBuyError(error.message || '구매에 실패했습니다');
+      setBuyError(error.message || 'Purchase failed');
     }
 
     setBuying(false);
@@ -188,7 +180,6 @@ export function NFTPanel() {
     if (nft.buyUrl) {
       window.open(nft.buyUrl, '_blank');
     } else {
-      // Fallback URLs
       if (selectedChain === 'ethereum' || selectedChain === 'arbitrum' || selectedChain === 'base' || selectedChain === 'polygon') {
         window.open(`https://opensea.io/assets/${selectedChain}/${nft.collectionAddress}/${nft.tokenId}`, '_blank');
       } else if (selectedChain === 'solana') {
@@ -208,7 +199,7 @@ export function NFTPanel() {
 
       <div className="rpg-panel-header">
         <div className="header-icon">🖼️</div>
-        <h2>수집가의 전시관</h2>
+        <h2>Collector's Gallery</h2>
         <button className="rpg-close-btn" onClick={() => setActivePanel('none')}>
           <span>✕</span>
         </button>
@@ -219,11 +210,10 @@ export function NFTPanel() {
           <span>🎨</span>
         </div>
         <div className="dialog-bubble">
-          <p>"환영합니다, 예술 애호가여. 실시간 마켓플레이스 데이터를 확인하고 거래하실 수 있습니다."</p>
+          <p>"Welcome, art enthusiast. Browse and trade NFTs from live marketplace data."</p>
         </div>
       </div>
 
-      {/* Chain Selector */}
       <div className="rpg-chain-selector">
         <div className="chain-network-selector">
           {CHAIN_OPTIONS.map(chain => (
@@ -243,41 +233,39 @@ export function NFTPanel() {
         </div>
       </div>
 
-      {/* View Tabs */}
       <div className="nft-view-tabs">
         <button
           className={`nft-tab-btn ${view === 'collections' ? 'active' : ''}`}
           onClick={() => { setView('collections'); setSelectedCollection(null); }}
         >
-          <span>📚</span> 컬렉션
+          <span>📚</span> Collections
         </button>
         <button
           className={`nft-tab-btn ${view === 'browse' ? 'active' : ''}`}
           onClick={() => { setView('browse'); fetchNFTs(); }}
         >
-          <span>🔍</span> 둘러보기
+          <span>🔍</span> Browse
         </button>
         <button
           className={`nft-tab-btn ${view === 'my' ? 'active' : ''}`}
           onClick={() => setView('my')}
         >
-          <span>👤</span> 내 NFT
+          <span>👤</span> My NFTs
         </button>
       </div>
 
-      {/* Content */}
       <div className="nft-content-area">
         {loading ? (
           <div className="nft-loading-state">
             <div className="loading-spinner" />
-            <p>마켓플레이스 데이터 로딩 중...</p>
+            <p>Loading marketplace data...</p>
           </div>
         ) : view === 'collections' ? (
           <div className="nft-collections-grid">
             {collections.length === 0 ? (
               <div className="nft-empty-state">
                 <span>📭</span>
-                <p>컬렉션을 불러오는 중입니다...</p>
+                <p>Loading collections...</p>
               </div>
             ) : (
               collections.map(collection => (
@@ -298,11 +286,11 @@ export function NFTPanel() {
                     <span className="collection-symbol">{collection.symbol}</span>
                     <div className="collection-stats-row">
                       <div className="stat-item">
-                        <span className="stat-label">바닥가</span>
+                        <span className="stat-label">Floor</span>
                         <span className="stat-value gold">{collection.floorPrice} {collection.currency}</span>
                       </div>
                       <div className="stat-item">
-                        <span className="stat-label">24h 거래량</span>
+                        <span className="stat-label">24h Vol</span>
                         <span className="stat-value">{collection.volume24h} {collection.currency}</span>
                       </div>
                     </div>
@@ -316,7 +304,7 @@ export function NFTPanel() {
             {selectedCollection && (
               <div className="browse-header">
                 <button className="back-btn-rpg" onClick={() => setView('collections')}>
-                  ← 뒤로
+                  ← Back
                 </button>
                 <h3>
                   {selectedCollection.image.startsWith('http') ? '🖼️' : selectedCollection.image} {selectedCollection.name}
@@ -327,7 +315,7 @@ export function NFTPanel() {
               {nfts.length === 0 ? (
                 <div className="nft-empty-state">
                   <span>🖼️</span>
-                  <p>판매 중인 NFT가 없습니다</p>
+                  <p>No NFTs listed for sale</p>
                 </div>
               ) : (
                 nfts.map(nft => (
@@ -357,12 +345,12 @@ export function NFTPanel() {
             {!authenticated ? (
               <div className="nft-empty-state">
                 <span>🔒</span>
-                <p>지갑을 연결하면 보유한 NFT를 확인할 수 있습니다</p>
+                <p>Connect wallet to view your NFTs</p>
               </div>
             ) : myNfts.length === 0 ? (
               <div className="nft-empty-state">
                 <span>📦</span>
-                <p>이 체인에 보유한 NFT가 없습니다</p>
+                <p>No NFTs found on this chain</p>
               </div>
             ) : (
               <div className="nft-items-grid">
@@ -387,7 +375,6 @@ export function NFTPanel() {
         )}
       </div>
 
-      {/* NFT Detail Modal */}
       {selectedNFT && (
         <div className="nft-modal-overlay" onClick={() => { setSelectedNFT(null); setBuyError(null); }}>
           <div className="nft-modal-rpg" onClick={e => e.stopPropagation()}>
@@ -409,22 +396,22 @@ export function NFTPanel() {
               
               <div className="modal-details">
                 <div className="detail-item">
-                  <span className="label">가격</span>
+                  <span className="label">Price</span>
                   <span className="value gold">{selectedNFT.price} {selectedNFT.currency}</span>
                 </div>
                 <div className="detail-item">
-                  <span className="label">소유자</span>
+                  <span className="label">Owner</span>
                   <span className="value">{selectedNFT.owner}</span>
                 </div>
                 <div className="detail-item">
-                  <span className="label">마켓플레이스</span>
+                  <span className="label">Marketplace</span>
                   <span className="value">{selectedNFT.marketplace}</span>
                 </div>
               </div>
 
               {selectedNFT.attributes && selectedNFT.attributes.length > 0 && (
                 <div className="modal-attributes">
-                  <h4>속성</h4>
+                  <h4>Attributes</h4>
                   <div className="attributes-list">
                     {selectedNFT.attributes.slice(0, 6).map((attr, i) => (
                       <div key={i} className="attribute-tag">
@@ -444,7 +431,7 @@ export function NFTPanel() {
 
               {buySuccess && (
                 <div className="buy-success-message">
-                  ✓ 거래가 시작되었습니다!
+                  ✓ Transaction initiated!
                 </div>
               )}
 
@@ -455,21 +442,21 @@ export function NFTPanel() {
                   disabled={!authenticated || buying || buySuccess}
                 >
                   {!authenticated ? (
-                    <span>지갑 연결 필요</span>
+                    <span>Connect Wallet</span>
                   ) : buying ? (
                     <>
                       <span className="btn-spinner" />
-                      <span>구매 진행 중...</span>
+                      <span>Processing...</span>
                     </>
                   ) : buySuccess ? (
                     <>
                       <span className="btn-icon">✓</span>
-                      <span>성공!</span>
+                      <span>Success!</span>
                     </>
                   ) : (
                     <>
                       <span className="btn-icon">💎</span>
-                      <span>{selectedNFT.price} {selectedNFT.currency}로 구매</span>
+                      <span>Buy for {selectedNFT.price} {selectedNFT.currency}</span>
                     </>
                   )}
                 </button>
@@ -479,7 +466,7 @@ export function NFTPanel() {
                   onClick={() => handleOpenExternal(selectedNFT)}
                 >
                   <span>🔗</span>
-                  <span>마켓플레이스에서 보기</span>
+                  <span>View on Marketplace</span>
                 </button>
               </div>
             </div>

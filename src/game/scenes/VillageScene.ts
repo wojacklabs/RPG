@@ -302,7 +302,7 @@ export class VillageScene extends Phaser.Scene {
     topBar.setScrollFactor(0);
     topBar.setDepth(9999);
 
-    const locationText = this.add.text(25, 22, '📍 DeFi 마을', {
+    const locationText = this.add.text(25, 22, '📍 DeFi Village', {
       fontSize: '18px',
       fontFamily: 'Georgia, serif',
       color: '#f0f0f0',

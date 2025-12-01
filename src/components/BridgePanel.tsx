@@ -100,7 +100,7 @@ export function BridgePanel() {
 
       <div className="rpg-panel-header">
         <div className="header-icon">🌉</div>
-        <h2>차원의 다리</h2>
+        <h2>Dimensional Bridge</h2>
         <button className="rpg-close-btn" onClick={() => setActivePanel('none')}>
           <span>✕</span>
         </button>
@@ -111,14 +111,13 @@ export function BridgePanel() {
           <span>🚢</span>
         </div>
         <div className="dialog-bubble">
-          <p>"이 마법의 다리를 통해 자네의 자산을 다른 세계로 옮길 수 있다네. 어디로 가시겠소?"</p>
+          <p>"Through this magical bridge, you can transfer your assets to other realms. Where shall we go?"</p>
         </div>
       </div>
 
       <div className="bridge-form-rpg">
-        {/* From Chain */}
         <div className="bridge-chain-box">
-          <div className="chain-box-label">출발 세계</div>
+          <div className="chain-box-label">From Chain</div>
           <div className="chain-grid-rpg">
             {ALL_CHAINS.map(chain => (
               <button
@@ -134,14 +133,12 @@ export function BridgePanel() {
           </div>
         </div>
 
-        {/* Switch */}
         <button className="bridge-switch-btn" onClick={swapChains}>
           <span>⇅</span>
         </button>
 
-        {/* To Chain */}
         <div className="bridge-chain-box">
-          <div className="chain-box-label">도착 세계</div>
+          <div className="chain-box-label">To Chain</div>
           <div className="chain-grid-rpg">
             {ALL_CHAINS.map(chain => (
               <button
@@ -157,9 +154,8 @@ export function BridgePanel() {
           </div>
         </div>
 
-        {/* Token & Amount */}
         <div className="bridge-amount-box">
-          <div className="chain-box-label">전송할 자산</div>
+          <div className="chain-box-label">Amount to Transfer</div>
           <div className="bridge-input-row">
             <input
               type="number"
@@ -180,23 +176,22 @@ export function BridgePanel() {
           </div>
         </div>
 
-        {/* Quote */}
         {quote && (
           <div className="rpg-quote-details">
             <div className="quote-row">
-              <span className="quote-label">받을 금액</span>
+              <span className="quote-label">You Receive</span>
               <span className="quote-value gold">{quote.estimatedReceive} {token}</span>
             </div>
             <div className="quote-row">
-              <span className="quote-label">브릿지 수수료</span>
+              <span className="quote-label">Bridge Fee</span>
               <span className="quote-value">{quote.fee} {token}</span>
             </div>
             <div className="quote-row">
-              <span className="quote-label">예상 소요 시간</span>
+              <span className="quote-label">Est. Time</span>
               <span className="quote-value">{quote.estimatedTime}</span>
             </div>
             <div className="quote-row">
-              <span className="quote-label">경로</span>
+              <span className="quote-label">Route</span>
               <span className="quote-value">{fromChainInfo?.icon} → {toChainInfo?.icon}</span>
             </div>
           </div>
@@ -208,23 +203,23 @@ export function BridgePanel() {
           disabled={!amount || !quote || loading || bridging || fromChain === toChain || !authenticated}
         >
           {!authenticated ? (
-            <span>지갑 연결 필요</span>
+            <span>Connect Wallet</span>
           ) : txStatus === 'pending' ? (
             <>
               <span className="btn-spinner" />
-              <span>전송 중...</span>
+              <span>Bridging...</span>
             </>
           ) : txStatus === 'success' ? (
             <>
               <span className="btn-icon">✓</span>
-              <span>전송 완료!</span>
+              <span>Bridge Complete!</span>
             </>
           ) : loading ? (
-            <span>시세 조회 중...</span>
+            <span>Getting Quote...</span>
           ) : (
             <>
               <span className="btn-icon">🌉</span>
-              <span>{toChainInfo?.name}(으)로 전송</span>
+              <span>Bridge to {toChainInfo?.name}</span>
             </>
           )}
         </button>

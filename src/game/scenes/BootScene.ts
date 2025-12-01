@@ -24,13 +24,13 @@ export class BootScene extends Phaser.Scene {
     
     const progressBar = this.add.graphics();
     
-    const title = this.add.text(width/2, height/2 - 80, 'DeFi 마을', {
+    const title = this.add.text(width/2, height/2 - 80, 'DeFi Village', {
       fontSize: '48px',
       fontFamily: 'Georgia, serif',
       color: '#e8b838',
     }).setOrigin(0.5);
     
-    const subtitle = this.add.text(width/2, height/2 - 40, '로딩 중...', {
+    const subtitle = this.add.text(width/2, height/2 - 40, 'Loading...', {
       fontSize: '18px',
       fontFamily: 'Georgia, serif', 
       color: '#a0a0b0',

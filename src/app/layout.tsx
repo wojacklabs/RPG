@@ -10,8 +10,8 @@ const notoSerifKR = Noto_Serif_KR({
 });
 
 export const metadata: Metadata = {
-  title: 'DeFi RPG - 온체인 어드벤처',
-  description: 'MegaETH 기반 바람의 나라 스타일 DeFi RPG 게임',
+  title: 'DeFi RPG - On-Chain Adventure',
+  description: 'A classic RPG-style DeFi game with multi-chain support',
 };
 
 export default function RootLayout({
@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ko">
+    <html lang="en">
       <body className={`${notoSerifKR.variable} antialiased`}>
         <Providers>
           {children}

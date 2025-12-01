@@ -105,14 +105,7 @@ export function SwapPanel() {
     setTxStatus('pending');
     
     try {
-      // Simulate swap transaction
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // In production, this would:
-      // 1. Get the wallet from Privy
-      // 2. Build transaction using LI.FI or 1inch
-      // 3. Send transaction and wait for confirmation
-      
       setTxStatus('success');
       setTimeout(() => {
         setTxStatus('idle');
@@ -136,32 +129,28 @@ export function SwapPanel() {
 
   return (
     <div className="rpg-panel swap-panel">
-      {/* Decorative corners */}
       <div className="panel-corner top-left" />
       <div className="panel-corner top-right" />
       <div className="panel-corner bottom-left" />
       <div className="panel-corner bottom-right" />
       
-      {/* Header */}
       <div className="rpg-panel-header">
         <div className="header-icon">⚗️</div>
-        <h2>연금술사의 교환소</h2>
+        <h2>Alchemist's Exchange</h2>
         <button className="rpg-close-btn" onClick={() => setActivePanel('none')}>
           <span>✕</span>
         </button>
       </div>
 
-      {/* NPC Dialog */}
       <div className="rpg-npc-dialog">
         <div className="npc-portrait">
           <span>🧙‍♂️</span>
         </div>
         <div className="dialog-bubble">
-          <p>"어서오게, 여행자여. 이곳에서 자네의 자산을 다른 형태로 변환할 수 있다네."</p>
+          <p>"Welcome, traveler. Here you can transmute your assets into different forms."</p>
         </div>
       </div>
 
-      {/* Chain Selector */}
       <div className="rpg-chain-selector">
         <div className="chain-tabs">
           <button 
@@ -203,21 +192,18 @@ export function SwapPanel() {
         )}
       </div>
 
-      {/* Protocol Badge */}
       {activeProtocol && (
         <div className="rpg-protocol-badge">
           <span className="badge-icon">{activeProtocol.icon}</span>
-          <span className="badge-text">{activeProtocol.name} 사용 중</span>
+          <span className="badge-text">Using {activeProtocol.name}</span>
         </div>
       )}
 
-      {/* Swap Form */}
       <div className="rpg-swap-form">
-        {/* From Token */}
         <div className="swap-token-box from">
           <div className="token-box-header">
-            <span className="token-label">보내는 토큰</span>
-            <span className="token-balance">잔액: 0.00</span>
+            <span className="token-label">From</span>
+            <span className="token-balance">Balance: 0.00</span>
           </div>
           <div className="token-input-row">
             <input
@@ -237,20 +223,18 @@ export function SwapPanel() {
           </div>
         </div>
 
-        {/* Switch Button */}
         <button className="swap-switch-btn" onClick={switchTokens}>
           <span className="switch-icon">⇅</span>
         </button>
 
-        {/* To Token */}
         <div className="swap-token-box to">
           <div className="token-box-header">
-            <span className="token-label">받는 토큰</span>
+            <span className="token-label">To</span>
           </div>
           <div className="token-input-row">
             <input
               type="text"
-              placeholder={loading ? '계산 중...' : '0.0'}
+              placeholder={loading ? 'Calculating...' : '0.0'}
               value={quote?.toAmount || ''}
               readOnly
               className="token-amount-input"
@@ -265,55 +249,53 @@ export function SwapPanel() {
           </div>
         </div>
 
-        {/* Quote Details */}
         {quote && (
           <div className="rpg-quote-details">
             <div className="quote-row">
-              <span className="quote-label">환율</span>
+              <span className="quote-label">Rate</span>
               <span className="quote-value">1 {fromToken} = {quote.rate.toFixed(4)} {toToken}</span>
             </div>
             <div className="quote-row">
-              <span className="quote-label">가격 영향</span>
+              <span className="quote-label">Price Impact</span>
               <span className={`quote-value ${quote.priceImpact > 1 ? 'negative' : 'positive'}`}>
                 {quote.priceImpact.toFixed(2)}%
               </span>
             </div>
             <div className="quote-row">
-              <span className="quote-label">네트워크 수수료</span>
+              <span className="quote-label">Network Fee</span>
               <span className="quote-value">~${quote.fee}</span>
             </div>
           </div>
         )}
 
-        {/* Swap Button */}
         <button 
           className={`rpg-action-btn ${swapping ? 'loading' : ''} ${txStatus}`}
           onClick={handleSwap}
           disabled={!fromAmount || !quote || loading || swapping || !authenticated}
         >
           {!authenticated ? (
-            <span>지갑 연결 필요</span>
+            <span>Connect Wallet</span>
           ) : txStatus === 'pending' ? (
             <>
               <span className="btn-spinner" />
-              <span>교환 진행 중...</span>
+              <span>Swapping...</span>
             </>
           ) : txStatus === 'success' ? (
             <>
               <span className="btn-icon">✓</span>
-              <span>교환 완료!</span>
+              <span>Swap Complete!</span>
             </>
           ) : txStatus === 'error' ? (
             <>
               <span className="btn-icon">✕</span>
-              <span>교환 실패</span>
+              <span>Swap Failed</span>
             </>
           ) : loading ? (
-            <span>시세 조회 중...</span>
+            <span>Getting Quote...</span>
           ) : (
             <>
               <span className="btn-icon">⚗️</span>
-              <span>교환하기</span>
+              <span>Swap</span>
             </>
           )}
         </button>
