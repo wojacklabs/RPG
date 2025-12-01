@@ -1,0 +1,157 @@
+import * as Phaser from 'phaser';
+import { GAME_CONFIG, DIRECTIONS } from '../config';
+
+export class Player extends Phaser.Physics.Arcade.Sprite {
+  private cursors: Phaser.Types.Input.Keyboard.CursorKeys | null = null;
+  private wasdKeys: { W: Phaser.Input.Keyboard.Key; A: Phaser.Input.Keyboard.Key; S: Phaser.Input.Keyboard.Key; D: Phaser.Input.Keyboard.Key } | null = null;
+  private currentDirection: number = DIRECTIONS.DOWN;
+  private isMoving: boolean = false;
+  private interactKey: Phaser.Input.Keyboard.Key | null = null;
+  private onInteract?: () => void;
+  private shadow: Phaser.GameObjects.Ellipse;
+  private readonly FRICTION = 600;
+
+  constructor(scene: Phaser.Scene, x: number, y: number) {
+    super(scene, x, y, 'player');
+    
+    scene.add.existing(this);
+    scene.physics.add.existing(this);
+    
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    body.setCollideWorldBounds(true);
+    body.setSize(16, 12);
+    body.setOffset(8, 36);
+    body.setMaxVelocity(GAME_CONFIG.PLAYER_SPEED, GAME_CONFIG.PLAYER_SPEED);
+    body.setDrag(this.FRICTION, this.FRICTION);
+    
+    this.shadow = scene.add.ellipse(x, y + 20, 24, 10, 0x000000, 0.3);
+    this.shadow.setDepth(this.y - 1);
+    
+    this.setupInput();
+    this.createAnimations();
+    this.play('idle_down');
+  }
+
+  private setupInput(): void {
+    const keyboard = this.scene.input.keyboard;
+    if (!keyboard) return;
+    
+    this.cursors = keyboard.createCursorKeys();
+    this.wasdKeys = {
+      W: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
+      A: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.A),
+      S: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.S),
+      D: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
+    };
+    
+    this.interactKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    this.interactKey.on('down', () => {
+      if (this.onInteract) this.onInteract();
+    });
+  }
+
+  private createAnimations(): void {
+    const dirs = ['down', 'left', 'right', 'up'];
+    
+    dirs.forEach((dir, idx) => {
+      if (!this.scene.anims.exists(`walk_${dir}`)) {
+        this.scene.anims.create({
+          key: `walk_${dir}`,
+          frames: this.scene.anims.generateFrameNumbers('player', {
+            start: idx * 4,
+            end: idx * 4 + 3,
+          }),
+          frameRate: 10,
+          repeat: -1,
+        });
+      }
+      
+      if (!this.scene.anims.exists(`idle_${dir}`)) {
+        this.scene.anims.create({
+          key: `idle_${dir}`,
+          frames: [{ key: 'player', frame: idx * 4 }],
+          frameRate: 1,
+        });
+      }
+    });
+  }
+
+  setInteractCallback(callback: () => void): void {
+    this.onInteract = callback;
+  }
+
+  update(): void {
+    if (!this.cursors || !this.wasdKeys) return;
+
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    
+    const up = this.cursors.up.isDown || this.wasdKeys.W.isDown;
+    const down = this.cursors.down.isDown || this.wasdKeys.S.isDown;
+    const left = this.cursors.left.isDown || this.wasdKeys.A.isDown;
+    const right = this.cursors.right.isDown || this.wasdKeys.D.isDown;
+
+    let vx = 0;
+    let vy = 0;
+
+    if (left) vx = -1;
+    else if (right) vx = 1;
+    
+    if (up) vy = -1;
+    else if (down) vy = 1;
+
+    if (vx !== 0 && vy !== 0) {
+      vx *= 0.707;
+      vy *= 0.707;
+    }
+
+    const speed = GAME_CONFIG.PLAYER_SPEED;
+    
+    if (vx !== 0 || vy !== 0) {
+      body.setVelocity(vx * speed, vy * speed);
+      
+      if (vy > 0) this.currentDirection = DIRECTIONS.DOWN;
+      else if (vy < 0) this.currentDirection = DIRECTIONS.UP;
+      else if (vx < 0) this.currentDirection = DIRECTIONS.LEFT;
+      else if (vx > 0) this.currentDirection = DIRECTIONS.RIGHT;
+      
+      const dirName = this.getDirectionName();
+      const animKey = `walk_${dirName}`;
+      if (this.anims.currentAnim?.key !== animKey) {
+        this.play(animKey, true);
+      }
+      this.isMoving = true;
+      
+      this.shadow.setPosition(this.x, this.y + 20);
+      this.shadow.setDepth(this.y - 1);
+    } else {
+      body.setVelocity(0, 0);
+      
+      if (this.isMoving) {
+        const dirName = this.getDirectionName();
+        this.play(`idle_${dirName}`, true);
+        this.isMoving = false;
+      }
+    }
+  }
+
+  private getDirectionName(): string {
+    switch (this.currentDirection) {
+      case DIRECTIONS.UP: return 'up';
+      case DIRECTIONS.LEFT: return 'left';
+      case DIRECTIONS.RIGHT: return 'right';
+      default: return 'down';
+    }
+  }
+
+  stopMovement(): void {
+    const body = this.body as Phaser.Physics.Arcade.Body;
+    body.setVelocity(0, 0);
+    this.isMoving = false;
+    this.play(`idle_${this.getDirectionName()}`, true);
+  }
+
+  destroy(fromScene?: boolean): void {
+    if (this.shadow) this.shadow.destroy();
+    super.destroy(fromScene);
+  }
+}
