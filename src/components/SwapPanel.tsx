@@ -18,29 +18,31 @@ const TOKENS: Record<string, { symbol: string; name: string; icon: string; decim
     { symbol: 'ETH', name: 'Ethereum', icon: '⟠', decimals: 18 },
     { symbol: 'USDC', name: 'USD Coin', icon: '💵', decimals: 6 },
     { symbol: 'ARB', name: 'Arbitrum', icon: '🔵', decimals: 18 },
-    { symbol: 'GMX', name: 'GMX', icon: '📈', decimals: 18 },
   ],
   base: [
     { symbol: 'ETH', name: 'Ethereum', icon: '⟠', decimals: 18 },
     { symbol: 'USDC', name: 'USD Coin', icon: '💵', decimals: 6 },
-    { symbol: 'cbETH', name: 'Coinbase ETH', icon: '🔷', decimals: 18 },
   ],
   polygon: [
     { symbol: 'MATIC', name: 'Polygon', icon: '💜', decimals: 18 },
     { symbol: 'USDC', name: 'USD Coin', icon: '💵', decimals: 6 },
-    { symbol: 'WETH', name: 'Wrapped ETH', icon: '⟠', decimals: 18 },
   ],
   solana: [
     { symbol: 'SOL', name: 'Solana', icon: '◎', decimals: 9 },
     { symbol: 'USDC', name: 'USD Coin', icon: '💵', decimals: 6 },
-    { symbol: 'BONK', name: 'Bonk', icon: '🐕', decimals: 5 },
-    { symbol: 'JUP', name: 'Jupiter', icon: '🪐', decimals: 6 },
   ],
   sui: [
     { symbol: 'SUI', name: 'Sui', icon: '💧', decimals: 9 },
     { symbol: 'USDC', name: 'USD Coin', icon: '💵', decimals: 6 },
-    { symbol: 'CETUS', name: 'Cetus', icon: '🐋', decimals: 9 },
   ],
+};
+
+const CHAIN_IDS: Record<string, number> = {
+  ethereum: 1,
+  arbitrum: 42161,
+  base: 8453,
+  polygon: 137,
+  optimism: 10,
 };
 
 export function SwapPanel() {
@@ -53,16 +55,65 @@ export function SwapPanel() {
   const [fromToken, setFromToken] = useState('ETH');
   const [toToken, setToToken] = useState('USDC');
   const [fromAmount, setFromAmount] = useState('');
-  const [quote, setQuote] = useState<{ toAmount: string; priceImpact: number; fee: string; rate: number } | null>(null);
+  const [balance, setBalance] = useState<string>('0');
+  const [quote, setQuote] = useState<{ toAmount: string; priceImpact: number; fee: string; rate: number; protocol: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [swapping, setSwapping] = useState(false);
   const [txStatus, setTxStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
+  const [error, setError] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
+
+  const walletAddress = wallets?.[0]?.address;
+
+  // Fetch balance
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (!walletAddress || chainType !== 'evm') {
+        setBalance('0');
+        return;
+      }
+
+      try {
+        const wallet = wallets?.[0];
+        if (!wallet) return;
+        
+        const provider = await wallet.getEthereumProvider();
+        const chainId = CHAIN_IDS[selectedChain];
+        
+        try {
+          await provider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: `0x${chainId.toString(16)}` }],
+          });
+        } catch (switchError: any) {
+          if (switchError.code === 4902) {
+            console.log('Chain not added to wallet');
+          }
+        }
+
+        const balanceHex = await provider.request({
+          method: 'eth_getBalance',
+          params: [walletAddress, 'latest'],
+        }) as string;
+        
+        const balanceWei = BigInt(balanceHex);
+        const balanceEth = Number(balanceWei) / 1e18;
+        setBalance(balanceEth.toFixed(4));
+      } catch (err) {
+        console.error('Failed to fetch balance:', err);
+        setBalance('0');
+      }
+    };
+
+    fetchBalance();
+  }, [walletAddress, selectedChain, chainType, wallets]);
 
   useEffect(() => {
     const tokens = TOKENS[selectedChain] || TOKENS.ethereum;
     setFromToken(tokens[0]?.symbol || 'ETH');
     setToToken(tokens[1]?.symbol || 'USDC');
     setQuote(null);
+    setError(null);
   }, [selectedChain]);
 
   const fetchQuote = useCallback(async () => {
@@ -72,6 +123,7 @@ export function SwapPanel() {
     }
 
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch(
         `/api/defi/quote?action=swap&chain=${selectedChain}&fromToken=${fromToken}&toToken=${toToken}&amount=${fromAmount}`
@@ -79,10 +131,16 @@ export function SwapPanel() {
       const data = await res.json();
       if (data.quote) {
         const rate = parseFloat(data.quote.toAmount) / parseFloat(fromAmount);
-        setQuote({ ...data.quote, rate });
+        setQuote({ 
+          toAmount: data.quote.toAmount,
+          priceImpact: data.quote.priceImpact,
+          fee: data.quote.fee,
+          rate,
+          protocol: data.quote.protocol,
+        });
       }
-    } catch (error) {
-      console.error('Failed to fetch quote:', error);
+    } catch (err) {
+      console.error('Failed to fetch quote:', err);
     }
     setLoading(false);
   }, [fromAmount, fromToken, toToken, selectedChain]);
@@ -99,21 +157,95 @@ export function SwapPanel() {
   const activeProtocol = protocols[0];
 
   const handleSwap = async () => {
-    if (!quote || !fromAmount) return;
+    if (!quote || !fromAmount || !walletAddress) return;
     
+    const amountNum = parseFloat(fromAmount);
+    const balanceNum = parseFloat(balance);
+    
+    if (amountNum > balanceNum) {
+      setError(`Insufficient balance. You have ${balance} ${fromToken}`);
+      return;
+    }
+
+    if (chainType !== 'evm') {
+      setError('Only EVM chains supported. Use Jupiter for Solana.');
+      return;
+    }
+
     setSwapping(true);
     setTxStatus('pending');
+    setError(null);
+    setTxHash(null);
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const wallet = wallets?.[0];
+      if (!wallet) throw new Error('No wallet connected');
+
+      const provider = await wallet.getEthereumProvider();
+      
+      // Get swap transaction from API
+      const res = await fetch('/api/swap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chain: selectedChain,
+          fromToken,
+          toToken,
+          amount: fromAmount,
+          walletAddress,
+          slippage: 1,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Failed to build swap transaction');
+      }
+
+      // Check if approval is needed
+      if (data.needsApproval && data.approveTransaction) {
+        setError('Token approval needed. Approving...');
+        
+        const approveTxHash = await provider.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: walletAddress,
+            to: data.approveTransaction.to,
+            data: data.approveTransaction.data,
+          }],
+        });
+        
+        console.log('Approval tx:', approveTxHash);
+        // Wait for approval confirmation
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+
+      // Execute swap
+      const swapTxHash = await provider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: walletAddress,
+          to: data.transaction.to,
+          data: data.transaction.data,
+          value: data.transaction.value,
+          gas: `0x${parseInt(data.transaction.gas).toString(16)}`,
+        }],
+      }) as string;
+      
+      setTxHash(swapTxHash);
       setTxStatus('success');
+      
       setTimeout(() => {
         setTxStatus('idle');
         setFromAmount('');
         setQuote(null);
-      }, 3000);
-    } catch (error) {
-      console.error('Swap failed:', error);
+        setTxHash(null);
+      }, 5000);
+
+    } catch (err: any) {
+      console.error('Swap error:', err);
+      setError(err.message || 'Swap failed');
       setTxStatus('error');
       setTimeout(() => setTxStatus('idle'), 3000);
     }
@@ -147,7 +279,7 @@ export function SwapPanel() {
           <span>🧙‍♂️</span>
         </div>
         <div className="dialog-bubble">
-          <p>"Welcome, traveler. Here you can transmute your assets into different forms."</p>
+          <p>"Swap tokens using {quote?.protocol || '1inch'} aggregator."</p>
         </div>
       </div>
 
@@ -195,7 +327,7 @@ export function SwapPanel() {
       {activeProtocol && (
         <div className="rpg-protocol-badge">
           <span className="badge-icon">{activeProtocol.icon}</span>
-          <span className="badge-text">Using {activeProtocol.name}</span>
+          <span className="badge-text">Via {quote?.protocol || activeProtocol.name}</span>
         </div>
       )}
 
@@ -203,7 +335,7 @@ export function SwapPanel() {
         <div className="swap-token-box from">
           <div className="token-box-header">
             <span className="token-label">From</span>
-            <span className="token-balance">Balance: 0.00</span>
+            <span className="token-balance">Balance: {balance} {tokens[0]?.symbol}</span>
           </div>
           <div className="token-input-row">
             <input
@@ -262,9 +394,21 @@ export function SwapPanel() {
               </span>
             </div>
             <div className="quote-row">
-              <span className="quote-label">Network Fee</span>
+              <span className="quote-label">Est. Gas</span>
               <span className="quote-value">~${quote.fee}</span>
             </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="buy-error-message">
+            ⚠️ {error}
+          </div>
+        )}
+
+        {txHash && (
+          <div className="buy-success-message">
+            ✓ Tx: {txHash.slice(0, 10)}...{txHash.slice(-8)}
           </div>
         )}
 

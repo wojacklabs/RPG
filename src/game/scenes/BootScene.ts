@@ -177,16 +177,18 @@ export class BootScene extends Phaser.Scene {
         g.fillCircle(x + fw/2 + 3, y + 18 - walkOffset, 3);
 
         // Face details based on direction
-        if (dir === 0) {
-          // DOWN - facing player, eyes visible
+        // In 2D RPG: pressing UP moves character up = shows back of head
+        // pressing DOWN moves character down = shows face
+        if (dir === 3) {
+          // dir=3 used for DOWN animation - facing player, eyes visible
           g.fillStyle(0x202020, 1);
           g.fillCircle(x + 13, y + 14 - walkOffset, 2);
           g.fillCircle(x + 19, y + 14 - walkOffset, 2);
           g.fillStyle(0xffffff, 1);
           g.fillCircle(x + 12, y + 13 - walkOffset, 1);
           g.fillCircle(x + 18, y + 13 - walkOffset, 1);
-        } else if (dir === 3) {
-          // UP - facing away, back of head (hair only)
+        } else if (dir === 0) {
+          // dir=0 used for UP animation - facing away, back of head
           g.fillStyle(0x202020, 1);
           g.fillRect(x + 10, y + 8 - walkOffset, 12, 8);
         } else {
