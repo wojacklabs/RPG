@@ -51,16 +51,24 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   private createAnimations(): void {
+    // Animation frame order: DOWN(row 0), LEFT(row 1), RIGHT(row 2), UP(row 3)
     const dirs = ['down', 'left', 'right', 'up'];
     
     dirs.forEach((dir, idx) => {
+      const startFrame = idx * 4;
+      
       if (!this.scene.anims.exists(`walk_${dir}`)) {
+        // Create frames array manually for compatibility
+        const frames = [
+          { key: 'player', frame: startFrame },
+          { key: 'player', frame: startFrame + 1 },
+          { key: 'player', frame: startFrame + 2 },
+          { key: 'player', frame: startFrame + 3 },
+        ];
+        
         this.scene.anims.create({
           key: `walk_${dir}`,
-          frames: this.scene.anims.generateFrameNumbers('player', {
-            start: idx * 4,
-            end: idx * 4 + 3,
-          }),
+          frames: frames,
           frameRate: 10,
           repeat: -1,
         });
@@ -69,7 +77,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       if (!this.scene.anims.exists(`idle_${dir}`)) {
         this.scene.anims.create({
           key: `idle_${dir}`,
-          frames: [{ key: 'player', frame: idx * 4 }],
+          frames: [{ key: 'player', frame: startFrame }],
           frameRate: 1,
         });
       }
@@ -109,8 +117,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (vx !== 0 || vy !== 0) {
       body.setVelocity(vx * speed, vy * speed);
       
-      if (vy > 0) this.currentDirection = DIRECTIONS.DOWN;
-      else if (vy < 0) this.currentDirection = DIRECTIONS.UP;
+      // vy < 0 = moving up on screen = character facing away (UP direction)
+      // vy > 0 = moving down on screen = character facing player (DOWN direction)
+      if (vy < 0) this.currentDirection = DIRECTIONS.UP;
+      else if (vy > 0) this.currentDirection = DIRECTIONS.DOWN;
       else if (vx < 0) this.currentDirection = DIRECTIONS.LEFT;
       else if (vx > 0) this.currentDirection = DIRECTIONS.RIGHT;
       

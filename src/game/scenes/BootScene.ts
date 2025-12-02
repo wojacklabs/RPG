@@ -137,6 +137,9 @@ export class BootScene extends Phaser.Scene {
     const g = this.make.graphics({ x: 0, y: 0 });
     const p = KOREAN_PALETTE;
 
+    // Row order: DOWN(0), LEFT(1), RIGHT(2), UP(3)
+    // DOWN = facing player (eyes visible)
+    // UP = facing away (back of head)
     for (let dir = 0; dir < 4; dir++) {
       for (let frame = 0; frame < 4; frame++) {
         const x = frame * fw;
@@ -144,13 +147,16 @@ export class BootScene extends Phaser.Scene {
         const walkOffset = Math.sin(frame * Math.PI / 2) * 2;
         const legOffset = frame % 2 === 0 ? 0 : 2;
 
+        // Shadow
         g.fillStyle(p.skin.shadow, 1);
         g.fillEllipse(x + fw/2, y + fh - 4, 20, 8);
 
+        // Legs
         g.fillStyle(0x3a3020, 1);
         g.fillRect(x + 10, y + 40 - walkOffset, 5, 8 + legOffset);
         g.fillRect(x + 17, y + 40 - walkOffset + legOffset, 5, 8 - legOffset);
 
+        // Body
         g.fillStyle(p.clothes.blue.base, 1);
         g.fillRect(x + 8, y + 24 - walkOffset, 16, 18);
         g.fillStyle(p.clothes.blue.dark, 1);
@@ -158,17 +164,21 @@ export class BootScene extends Phaser.Scene {
         g.fillStyle(p.clothes.blue.light, 1);
         g.fillRect(x + 21, y + 24 - walkOffset, 3, 18);
 
+        // Arms
         const armSwing = frame % 2 === 0 ? -2 : 2;
         g.fillStyle(p.skin.base, 1);
         g.fillRect(x + 4, y + 26 - walkOffset + armSwing, 4, 12);
         g.fillRect(x + 24, y + 26 - walkOffset - armSwing, 4, 12);
 
+        // Head
         g.fillStyle(p.skin.base, 1);
         g.fillCircle(x + fw/2, y + 16 - walkOffset, 10);
         g.fillStyle(p.skin.shadow, 1);
         g.fillCircle(x + fw/2 + 3, y + 18 - walkOffset, 3);
 
+        // Face details based on direction
         if (dir === 0) {
+          // DOWN - facing player, eyes visible
           g.fillStyle(0x202020, 1);
           g.fillCircle(x + 13, y + 14 - walkOffset, 2);
           g.fillCircle(x + 19, y + 14 - walkOffset, 2);
@@ -176,14 +186,17 @@ export class BootScene extends Phaser.Scene {
           g.fillCircle(x + 12, y + 13 - walkOffset, 1);
           g.fillCircle(x + 18, y + 13 - walkOffset, 1);
         } else if (dir === 3) {
+          // UP - facing away, back of head (hair only)
           g.fillStyle(0x202020, 1);
           g.fillRect(x + 10, y + 8 - walkOffset, 12, 8);
         } else {
+          // LEFT/RIGHT - side profile
           g.fillStyle(0x202020, 1);
           const eyeX = dir === 1 ? 12 : 18;
           g.fillCircle(x + eyeX, y + 14 - walkOffset, 2);
         }
 
+        // Hair
         g.fillStyle(0x202020, 1);
         g.fillRect(x + 8, y + 4 - walkOffset, 16, 10);
         g.fillStyle(0x303030, 1);
@@ -191,16 +204,17 @@ export class BootScene extends Phaser.Scene {
       }
     }
 
+    // Generate texture and add frames manually
     g.generateTexture('player', fw * 4, fh * 4);
     g.destroy();
 
+    // Add frames to the texture
+    // Phaser sprite sheet layout: frames 0-3 = row 0 (DOWN), 4-7 = row 1 (LEFT), etc.
     const texture = this.textures.get('player');
-    const frameNames: (string | number)[] = [];
-    for (let dir = 0; dir < 4; dir++) {
-      for (let frame = 0; frame < 4; frame++) {
-        const frameName = dir * 4 + frame;
-        texture.add(frameName, 0, frame * fw, dir * fh, fw, fh);
-        frameNames.push(frameName);
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 4; col++) {
+        const frameIndex = row * 4 + col;
+        texture.add(frameIndex, 0, col * fw, row * fh, fw, fh);
       }
     }
   }
