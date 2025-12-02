@@ -3,43 +3,42 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useGameStore } from '@/stores/gameStore';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
+import {
+  getQuote,
+  checkAllowance,
+  buildApprovalTx,
+  buildSwapTx,
+  getSupportedTokens,
+  CHAIN_INFO,
+  SUPPORTED_CHAIN_IDS,
+  type UniswapQuote,
+} from '@/lib/uniswap-client';
 
-type ChainType = 'evm' | 'solana' | 'sui';
-
-// Uniswap V3 Supported Chains & Tokens
-const CHAINS = {
-  ethereum: { name: 'Ethereum', icon: '⟠', chainId: 1, explorer: 'https://etherscan.io/tx/' },
-  arbitrum: { name: 'Arbitrum', icon: '🔷', chainId: 42161, explorer: 'https://arbiscan.io/tx/' },
-  base: { name: 'Base', icon: '🔵', chainId: 8453, explorer: 'https://basescan.org/tx/' },
-  polygon: { name: 'Polygon', icon: '🟣', chainId: 137, explorer: 'https://polygonscan.com/tx/' },
-  optimism: { name: 'Optimism', icon: '🔴', chainId: 10, explorer: 'https://optimistic.etherscan.io/tx/' },
-};
-
-const TOKENS: Record<string, { symbol: string; name: string; icon: string }[]> = {
-  ethereum: [
+const TOKENS: Record<number, { symbol: string; name: string; icon: string }[]> = {
+  1: [
     { symbol: 'ETH', name: 'Ethereum', icon: '⟠' },
     { symbol: 'USDC', name: 'USD Coin', icon: '💵' },
     { symbol: 'USDT', name: 'Tether', icon: '💲' },
     { symbol: 'WBTC', name: 'Wrapped BTC', icon: '₿' },
     { symbol: 'DAI', name: 'DAI', icon: '◈' },
   ],
-  arbitrum: [
+  42161: [
     { symbol: 'ETH', name: 'Ethereum', icon: '⟠' },
     { symbol: 'USDC', name: 'USD Coin', icon: '💵' },
     { symbol: 'USDT', name: 'Tether', icon: '💲' },
     { symbol: 'ARB', name: 'Arbitrum', icon: '🔷' },
   ],
-  base: [
+  8453: [
     { symbol: 'ETH', name: 'Ethereum', icon: '⟠' },
     { symbol: 'USDC', name: 'USD Coin', icon: '💵' },
   ],
-  polygon: [
+  137: [
     { symbol: 'MATIC', name: 'Polygon', icon: '🟣' },
     { symbol: 'USDC', name: 'USD Coin', icon: '💵' },
     { symbol: 'USDT', name: 'Tether', icon: '💲' },
     { symbol: 'WETH', name: 'Wrapped ETH', icon: '⟠' },
   ],
-  optimism: [
+  10: [
     { symbol: 'ETH', name: 'Ethereum', icon: '⟠' },
     { symbol: 'USDC', name: 'USD Coin', icon: '💵' },
     { symbol: 'OP', name: 'Optimism', icon: '🔴' },
@@ -51,63 +50,80 @@ export function SwapPanel() {
   const { authenticated } = usePrivy();
   const { wallets } = useWallets();
 
-  const [selectedChain, setSelectedChain] = useState<string>('ethereum');
+  const [chainId, setChainId] = useState<number>(1);
   const [fromToken, setFromToken] = useState('ETH');
   const [toToken, setToToken] = useState('USDC');
   const [fromAmount, setFromAmount] = useState('');
   const [balance, setBalance] = useState<string>('0');
-  const [quote, setQuote] = useState<{ toAmount: string; path: string; priceImpact: number } | null>(null);
+  const [quote, setQuote] = useState<UniswapQuote | null>(null);
   const [loading, setLoading] = useState(false);
   const [swapping, setSwapping] = useState(false);
-  const [txStatus, setTxStatus] = useState<'idle' | 'approving' | 'swapping' | 'success' | 'error'>('idle');
+  const [txStatus, setTxStatus] = useState<'idle' | 'switching' | 'approving' | 'swapping' | 'success' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
 
   const walletAddress = wallets?.[0]?.address;
-  const chain = CHAINS[selectedChain as keyof typeof CHAINS];
+  const chain = CHAIN_INFO[chainId];
 
-  // Fetch wallet balance
-  useEffect(() => {
-    const fetchBalance = async () => {
-      if (!walletAddress) return;
+  // Switch network and fetch balance
+  const switchNetworkAndFetchBalance = useCallback(async (targetChainId: number) => {
+    const wallet = wallets?.[0];
+    if (!wallet || !walletAddress) return;
+
+    try {
+      setTxStatus('switching');
+      const provider = await wallet.getEthereumProvider();
+
+      // Switch network
       try {
-        const wallet = wallets?.[0];
-        if (!wallet) return;
-
-        const provider = await wallet.getEthereumProvider();
         await provider.request({
           method: 'wallet_switchEthereumChain',
-          params: [{ chainId: `0x${chain.chainId.toString(16)}` }],
+          params: [{ chainId: `0x${targetChainId.toString(16)}` }],
         });
-
-        const balanceHex = await provider.request({
-          method: 'eth_getBalance',
-          params: [walletAddress, 'latest'],
-        });
-
-        const balanceWei = BigInt(balanceHex);
-        const balanceEth = Number(balanceWei) / 1e18;
-        setBalance(balanceEth.toFixed(4));
-      } catch (e) {
-        console.error('Failed to fetch balance:', e);
+      } catch (switchError: any) {
+        // Chain not added, try adding it
+        if (switchError.code === 4902) {
+          throw new Error(`Please add ${CHAIN_INFO[targetChainId]?.name || 'this network'} to your wallet`);
+        }
+        throw switchError;
       }
-    };
 
-    if (walletAddress) fetchBalance();
-  }, [walletAddress, selectedChain, wallets]);
+      // Fetch balance
+      const balanceHex = await provider.request({
+        method: 'eth_getBalance',
+        params: [walletAddress, 'latest'],
+      });
+
+      const balanceWei = BigInt(balanceHex);
+      const balanceEth = Number(balanceWei) / 1e18;
+      setBalance(balanceEth.toFixed(4));
+      setTxStatus('idle');
+    } catch (e: any) {
+      console.error('Failed to switch network:', e);
+      setError(e.message || 'Failed to switch network');
+      setTxStatus('error');
+    }
+  }, [wallets, walletAddress]);
+
+  // Initial balance fetch
+  useEffect(() => {
+    if (walletAddress) {
+      switchNetworkAndFetchBalance(chainId);
+    }
+  }, [walletAddress, chainId, switchNetworkAndFetchBalance]);
 
   // Reset tokens when chain changes
   useEffect(() => {
-    const tokens = TOKENS[selectedChain] || TOKENS.ethereum;
+    const tokens = TOKENS[chainId] || TOKENS[1];
     setFromToken(tokens[0]?.symbol || 'ETH');
     setToToken(tokens[1]?.symbol || 'USDC');
     setQuote(null);
     setError(null);
-  }, [selectedChain]);
+  }, [chainId]);
 
-  // Fetch Uniswap quote
+  // Fetch quote using wallet's provider
   const fetchQuote = useCallback(async () => {
-    if (!fromAmount || parseFloat(fromAmount) <= 0) {
+    if (!fromAmount || parseFloat(fromAmount) <= 0 || !wallets?.[0]) {
       setQuote(null);
       return;
     }
@@ -116,42 +132,41 @@ export function SwapPanel() {
     setError(null);
 
     try {
-      const res = await fetch(
-        `/api/swap?chain=${selectedChain}&tokenIn=${fromToken}&tokenOut=${toToken}&amount=${fromAmount}`
-      );
-      const data = await res.json();
+      const wallet = wallets[0];
+      const provider = await wallet.getEthereumProvider();
 
-      if (data.error) {
-        setError(data.error);
-        setQuote(null);
-      } else {
-        setQuote({
-          toAmount: data.quote.toAmount,
-          path: data.quote.path,
-          priceImpact: data.quote.priceImpact,
-        });
-      }
-    } catch (e) {
-      setError('Failed to get quote');
+      const quoteResult = await getQuote(
+        provider,
+        chainId,
+        fromToken,
+        toToken,
+        fromAmount
+      );
+
+      setQuote(quoteResult);
+    } catch (e: any) {
+      console.error('Quote error:', e);
+      setError(e.message || 'Failed to get quote');
+      setQuote(null);
     } finally {
       setLoading(false);
     }
-  }, [fromAmount, fromToken, toToken, selectedChain]);
+  }, [fromAmount, fromToken, toToken, chainId, wallets]);
 
   useEffect(() => {
     const debounce = setTimeout(fetchQuote, 500);
     return () => clearTimeout(debounce);
   }, [fetchQuote]);
 
-  const tokens = TOKENS[selectedChain] || TOKENS.ethereum;
+  const tokens = TOKENS[chainId] || TOKENS[1];
 
   const handleSwap = async () => {
-    if (!quote || !walletAddress) return;
+    if (!quote || !walletAddress || !wallets?.[0]) return;
 
     const amountNum = parseFloat(fromAmount);
     const balanceNum = parseFloat(balance);
 
-    // Native token check
+    // Native token balance check
     if ((fromToken === 'ETH' || fromToken === 'MATIC') && amountNum > balanceNum) {
       setError('Insufficient balance');
       return;
@@ -162,41 +177,32 @@ export function SwapPanel() {
     setTxHash(null);
 
     try {
-      const wallet = wallets?.[0];
-      if (!wallet) throw new Error('Wallet not connected');
-
+      const wallet = wallets[0];
       const provider = await wallet.getEthereumProvider();
 
-      // Build swap transaction
-      const res = await fetch('/api/swap', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          chain: selectedChain,
-          fromToken,
-          toToken,
-          amount: fromAmount,
-          walletAddress,
-          slippage: 0.5,
-        }),
-      });
+      // Check if approval is needed
+      const allowance = await checkAllowance(
+        provider,
+        chainId,
+        fromToken,
+        walletAddress,
+        fromAmount
+      );
 
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-
-      // Handle approval if needed
-      if (data.needsApproval && data.approveTransaction) {
+      if (allowance.needsApproval) {
         setTxStatus('approving');
+        const approvalTx = buildApprovalTx(chainId, fromToken);
+        
         const approveTxHash = await provider.request({
           method: 'eth_sendTransaction',
           params: [{
             from: walletAddress,
-            to: data.approveTransaction.to,
-            data: data.approveTransaction.data,
+            to: approvalTx.to,
+            data: approvalTx.data,
           }],
         });
-        
-        // Wait for approval confirmation
+
+        // Wait for approval
         let confirmed = false;
         while (!confirmed) {
           await new Promise(r => setTimeout(r, 2000));
@@ -210,14 +216,16 @@ export function SwapPanel() {
 
       // Execute swap
       setTxStatus('swapping');
+      const swapTx = buildSwapTx(chainId, fromToken, toToken, fromAmount, walletAddress, quote);
+
       const swapTxHash = await provider.request({
         method: 'eth_sendTransaction',
         params: [{
           from: walletAddress,
-          to: data.transaction.to,
-          data: data.transaction.data,
-          value: data.transaction.value,
-          gas: `0x${parseInt(data.transaction.gasLimit).toString(16)}`,
+          to: swapTx.to,
+          data: swapTx.data,
+          value: swapTx.value,
+          gas: '0x493E0', // 300000
         }],
       });
 
@@ -225,6 +233,9 @@ export function SwapPanel() {
       setTxStatus('success');
       setFromAmount('');
       setQuote(null);
+
+      // Refresh balance
+      setTimeout(() => switchNetworkAndFetchBalance(chainId), 3000);
     } catch (e: any) {
       console.error('Swap error:', e);
       setError(e.message || 'Swap failed');
@@ -274,17 +285,18 @@ export function SwapPanel() {
             <div className="mb-4">
               <label className="block text-amber-300/70 text-sm mb-2">Network</label>
               <div className="flex gap-2 flex-wrap">
-                {Object.entries(CHAINS).map(([key, c]) => (
+                {SUPPORTED_CHAIN_IDS.map((id) => (
                   <button
-                    key={key}
-                    onClick={() => setSelectedChain(key)}
+                    key={id}
+                    onClick={() => setChainId(id)}
+                    disabled={txStatus === 'switching'}
                     className={`px-3 py-2 rounded-lg text-sm transition-all ${
-                      selectedChain === key
+                      chainId === id
                         ? 'bg-amber-600 text-white'
                         : 'bg-stone-700 text-amber-200 hover:bg-stone-600'
-                    }`}
+                    } ${txStatus === 'switching' ? 'opacity-50' : ''}`}
                   >
-                    {c.icon} {c.name}
+                    {CHAIN_INFO[id].icon} {CHAIN_INFO[id].name}
                   </button>
                 ))}
               </div>
@@ -292,7 +304,11 @@ export function SwapPanel() {
 
             {/* Balance */}
             <div className="text-right text-sm text-amber-300/70 mb-2">
-              Balance: {balance} {tokens[0]?.symbol || 'ETH'}
+              {txStatus === 'switching' ? (
+                <span>Switching network...</span>
+              ) : (
+                <>Balance: {balance} {tokens[0]?.symbol || 'ETH'}</>
+              )}
             </div>
 
             {/* From Token */}
@@ -369,7 +385,7 @@ export function SwapPanel() {
                   {loading ? (
                     <span className="text-amber-300/50">Loading...</span>
                   ) : quote ? (
-                    quote.toAmount
+                    quote.amountOut
                   ) : (
                     <span className="text-amber-300/30">0.0</span>
                   )}
@@ -385,10 +401,8 @@ export function SwapPanel() {
                   <span className="text-amber-100">{quote.path}</span>
                 </div>
                 <div className="flex justify-between text-amber-300/70">
-                  <span>Price Impact</span>
-                  <span className={quote.priceImpact > 1 ? 'text-red-400' : 'text-green-400'}>
-                    ~{quote.priceImpact}%
-                  </span>
+                  <span>Min. Received</span>
+                  <span className="text-amber-100">{quote.amountOutMin} {toToken}</span>
                 </div>
                 <div className="flex justify-between text-amber-300/70">
                   <span>Protocol</span>
@@ -422,25 +436,29 @@ export function SwapPanel() {
             {/* Swap Button */}
             <button
               onClick={handleSwap}
-              disabled={!quote || swapping || !fromAmount}
+              disabled={!quote || swapping || !fromAmount || txStatus === 'switching'}
               className="rpg-button w-full py-4 text-lg disabled:opacity-50"
             >
               {!authenticated
                 ? 'Connect Wallet'
+                : txStatus === 'switching'
+                ? '⏳ Switching Network...'
                 : swapping
                 ? txStatus === 'approving'
-                  ? '⏳ Approving...'
+                  ? '⏳ Approving Token...'
                   : '⏳ Swapping...'
                 : !fromAmount
                 ? 'Enter Amount'
+                : loading
+                ? 'Getting Quote...'
                 : !quote
-                ? 'Loading Quote...'
+                ? error ? 'No Liquidity' : 'Enter Amount'
                 : `Swap via Uniswap V3`}
             </button>
 
             {/* Protocol Info */}
             <div className="mt-4 text-center text-xs text-amber-300/50">
-              Powered by Uniswap V3 • No API Key Required
+              Powered by Uniswap V3 • Direct Contract Interaction
             </div>
           </>
         )}
