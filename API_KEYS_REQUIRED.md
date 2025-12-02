@@ -1,121 +1,63 @@
-# Required API Keys for On-Chain Features
+# Required API Keys for DeFi RPG
 
-## 1. Swap (DEX Aggregator) - Choose One
+## ✅ No API Key Required
 
-### Option A: 1inch API (Recommended)
-- **URL**: https://portal.1inch.dev/
-- **Free tier**: 10 req/sec
-- **Chains**: Ethereum, Arbitrum, Base, Polygon, Optimism, etc.
-- **Env var**: `ONEINCH_API_KEY`
-
-### Option B: LI.FI API
-- **URL**: https://li.fi/
-- **Free tier**: Available
-- **Chains**: 20+ EVM chains
-- **Env var**: `LIFI_API_KEY`
-
-### Option C: 0x API
-- **URL**: https://dashboard.0x.org/
-- **Free tier**: 100k requests/month
-- **Chains**: Ethereum, Arbitrum, Base, Polygon, etc.
-- **Env var**: `ZEROX_API_KEY`
-
----
-
-## 2. Bridge (Cross-Chain)
-
-### LI.FI API (Swap + Bridge combined)
-- **URL**: https://li.fi/
-- **Supports**: Swap + Bridge in one API
-- **Env var**: `LIFI_API_KEY`
-
----
-
-## 3. NFT Marketplace
-
-### Reservoir API (EVM chains)
-- **URL**: https://dashboard.reservoir.tools/
-- **Free tier**: 120 requests/min
+### Uniswap V3 (Token Swap)
 - **Chains**: Ethereum, Arbitrum, Base, Polygon, Optimism
-- **Env var**: `RESERVOIR_API_KEY`
-
-### Magic Eden API (Solana)
-- **URL**: https://api.magiceden.dev/
-- **Free tier**: Available (rate limited)
-- **No API key required for basic usage**
+- **How it works**: Direct smart contract interaction via SDK
+- **Status**: Fully functional without any API key
 
 ---
 
-## 4. RPC Providers - Choose One
+## 🔑 Required Keys
 
-### Option A: Alchemy (Recommended)
-- **URL**: https://dashboard.alchemy.com/
-- **Free tier**: 300M compute units/month
-- **Chains**: Ethereum, Arbitrum, Base, Polygon, Optimism
-- **Env vars**:
-  - `ALCHEMY_API_KEY`
-  - Or individual: `ALCHEMY_ETH_URL`, `ALCHEMY_ARB_URL`, etc.
+### 1. Privy (Authentication)
+- **Purpose**: User authentication and wallet management
+- **Key**: `NEXT_PUBLIC_PRIVY_APP_ID`
+- **Get it**: [Privy Dashboard](https://dashboard.privy.io/)
+- **Setup**:
+  1. Create an app on Privy Dashboard
+  2. Copy your App ID
+  3. Add `http://localhost:3000` to Allowed Origins
 
-### Option B: Infura
-- **URL**: https://app.infura.io/
-- **Free tier**: 100k requests/day
-- **Env var**: `INFURA_API_KEY`
-
-### Option C: QuickNode
-- **URL**: https://quicknode.com/
-- **Free tier**: 10M API credits/month
-- **Env var**: `QUICKNODE_API_KEY`
+### 2. Reservoir (NFT Marketplace) - Optional
+- **Purpose**: Fetching NFT collections for EVM chains
+- **Key**: `RESERVOIR_API_KEY`
+- **Get it**: [Reservoir Dashboard](https://dashboard.reservoir.tools/)
+- **Note**: Works without key but rate-limited
 
 ---
 
-## .env.local Template
+## `.env.local` Example
 
 ```bash
-# Privy (already configured)
+# Required for authentication
 NEXT_PUBLIC_PRIVY_APP_ID=your-privy-app-id
 
-# DEX Aggregator (choose one)
-ONEINCH_API_KEY=your-1inch-api-key
-# or
-LIFI_API_KEY=your-lifi-api-key
-
-# NFT Marketplace
+# Optional - for NFT marketplace
 RESERVOIR_API_KEY=your-reservoir-api-key
-
-# RPC Provider
-ALCHEMY_API_KEY=your-alchemy-api-key
-
-# Alternative: Direct RPC URLs
-NEXT_PUBLIC_RPC_ETHEREUM=https://eth-mainnet.g.alchemy.com/v2/YOUR_KEY
-NEXT_PUBLIC_RPC_ARBITRUM=https://arb-mainnet.g.alchemy.com/v2/YOUR_KEY
-NEXT_PUBLIC_RPC_BASE=https://base-mainnet.g.alchemy.com/v2/YOUR_KEY
-NEXT_PUBLIC_RPC_POLYGON=https://polygon-mainnet.g.alchemy.com/v2/YOUR_KEY
 ```
 
 ---
 
-## Priority Order
+## Feature Status
 
-1. **1inch API** - For swaps (most important)
-2. **Alchemy API** - For RPC calls and balance queries
-3. **Reservoir API** - For NFT marketplace (already partially working)
-4. **LI.FI API** - For bridge functionality
+| Feature | API Key | Status |
+|---------|---------|--------|
+| **Token Swap** | ❌ None | ✅ Uniswap V3 direct contract |
+| **Authentication** | Privy | Required |
+| **NFT (EVM)** | Reservoir | Optional (rate-limited without) |
+| **NFT (Solana)** | None | Magic Eden public API |
+| **Bridge** | None | Basic estimates |
+| **Staking** | None | Protocol info display |
+| **Liquidity** | None | Pool info display |
 
 ---
 
-## Quick Start
+## Supported Chains for Swap
 
-1. Get 1inch API key: https://portal.1inch.dev/
-2. Get Alchemy API key: https://dashboard.alchemy.com/
-3. Get Reservoir API key: https://dashboard.reservoir.tools/
-4. Add to `.env.local`:
-
-```bash
-NEXT_PUBLIC_PRIVY_APP_ID=cmimpnebf001pjv0ctl7oedn0
-ONEINCH_API_KEY=your-key-here
-ALCHEMY_API_KEY=your-key-here
-RESERVOIR_API_KEY=your-key-here
-```
-
-5. Run: `npm run dev`
-
+- Ethereum (chainId: 1)
+- Arbitrum (chainId: 42161)
+- Base (chainId: 8453)
+- Polygon (chainId: 137)
+- Optimism (chainId: 10)

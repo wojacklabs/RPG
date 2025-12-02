@@ -1,8 +1,8 @@
 // Multi-chain DeFi Service
-// Uses 1inch API for swaps when ONEINCH_API_KEY is configured
-// Falls back to mock data otherwise
+// Uses Uniswap V3 for swaps - No API Key Required
 
 import { EVM_CHAINS, DEFI_PROTOCOLS, type EVMChainKey, type DefiChainKey } from '../chains';
+import { getQuote as getUniswapQuote } from './uniswapService';
 
 // ============================================
 // Types
@@ -49,7 +49,7 @@ export interface LPInfo {
 }
 
 // ============================================
-// Chain & Token Configuration
+// Chain Configuration
 // ============================================
 const CHAIN_IDS: Record<string, number> = {
   ethereum: 1,
@@ -59,51 +59,8 @@ const CHAIN_IDS: Record<string, number> = {
   optimism: 10,
 };
 
-const TOKEN_ADDRESSES: Record<string, Record<string, string>> = {
-  ethereum: {
-    ETH: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
-    USDC: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-    USDT: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
-    WETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
-    WBTC: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599',
-  },
-  arbitrum: {
-    ETH: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
-    USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
-    USDT: '0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9',
-    ARB: '0x912CE59144191C1204E64559FE8253a0e49E6548',
-  },
-  base: {
-    ETH: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
-    USDC: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-  },
-  polygon: {
-    MATIC: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
-    USDC: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
-    USDT: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F',
-  },
-  optimism: {
-    ETH: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
-    USDC: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85',
-    OP: '0x4200000000000000000000000000000000000042',
-  },
-};
-
-const TOKEN_DECIMALS: Record<string, number> = {
-  ETH: 18,
-  MATIC: 18,
-  USDC: 6,
-  USDT: 6,
-  WETH: 18,
-  WBTC: 8,
-  ARB: 18,
-  OP: 18,
-  SOL: 9,
-  SUI: 9,
-};
-
 // ============================================
-// Swap Functions
+// Swap Functions - Using Uniswap V3
 // ============================================
 export async function getSwapQuote(
   chainKey: DefiChainKey,
@@ -112,56 +69,29 @@ export async function getSwapQuote(
   amount: string,
   protocol?: string
 ): Promise<SwapQuote | null> {
-  const apiKey = process.env.ONEINCH_API_KEY;
-  
-  // If API key is configured, use 1inch API
-  if (apiKey && CHAIN_IDS[chainKey]) {
-    try {
-      const chainId = CHAIN_IDS[chainKey];
-      const fromTokenAddr = TOKEN_ADDRESSES[chainKey]?.[fromToken];
-      const toTokenAddr = TOKEN_ADDRESSES[chainKey]?.[toToken];
-      
-      if (!fromTokenAddr || !toTokenAddr) {
-        throw new Error('Token not supported');
-      }
-
-      const decimals = TOKEN_DECIMALS[fromToken] || 18;
-      const amountWei = BigInt(Math.floor(parseFloat(amount) * Math.pow(10, decimals))).toString();
-
-      const url = `https://api.1inch.dev/swap/v6.0/${chainId}/quote?src=${fromTokenAddr}&dst=${toTokenAddr}&amount=${amountWei}`;
-      
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Accept': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const toDecimals = TOKEN_DECIMALS[toToken] || 18;
-        const toAmount = (Number(data.dstAmount) / Math.pow(10, toDecimals)).toFixed(6);
-        const gasUsd = (Number(data.gas || 200000) * 30 * 1e-9).toFixed(2); // Rough estimate
-
-        return {
-          fromToken,
-          toToken,
-          fromAmount: amount,
-          toAmount,
-          priceImpact: 0.1, // 1inch doesn't return this
-          fee: gasUsd,
-          route: [fromToken, toToken],
-          chainId,
-          protocol: '1inch',
-        };
-      }
-    } catch (error) {
-      console.error('1inch API error:', error);
-    }
+  // Only EVM chains supported for Uniswap
+  if (!CHAIN_IDS[chainKey]) {
+    return getMockSwapQuote(chainKey, fromToken, toToken, amount);
   }
 
-  // Fallback to mock data
-  return getMockSwapQuote(chainKey, fromToken, toToken, amount);
+  try {
+    const quote = await getUniswapQuote(chainKey, fromToken, toToken, amount);
+    
+    return {
+      fromToken,
+      toToken,
+      fromAmount: amount,
+      toAmount: quote.amountOut,
+      priceImpact: quote.priceImpact,
+      fee: (parseInt(quote.gasEstimate) * 30 / 1e9).toFixed(2), // Rough gas cost in USD
+      route: [fromToken, toToken],
+      chainId: CHAIN_IDS[chainKey],
+      protocol: 'Uniswap V3',
+    };
+  } catch (error) {
+    console.error('Uniswap quote error:', error);
+    return getMockSwapQuote(chainKey, fromToken, toToken, amount);
+  }
 }
 
 function getMockSwapQuote(
@@ -171,11 +101,12 @@ function getMockSwapQuote(
   amount: string
 ): SwapQuote {
   const rates: Record<string, Record<string, number>> = {
-    ETH: { USDC: 3500, USDT: 3500, WBTC: 0.053, ARB: 3000 },
-    USDC: { ETH: 0.000285, USDT: 1, WBTC: 0.0000151 },
-    MATIC: { USDC: 0.85, USDT: 0.85 },
+    ETH: { USDC: 3500, USDT: 3500, WBTC: 0.053, ARB: 3000, DAI: 3500 },
+    USDC: { ETH: 0.000285, USDT: 1, WBTC: 0.0000151, DAI: 1 },
+    MATIC: { USDC: 0.85, USDT: 0.85, WETH: 0.00024 },
     SOL: { USDC: 180, USDT: 180 },
     SUI: { USDC: 2.5, USDT: 2.5 },
+    ARB: { ETH: 0.00033, USDC: 1.15 },
   };
 
   const rate = rates[fromToken]?.[toToken] || 1;
@@ -187,10 +118,10 @@ function getMockSwapQuote(
     fromAmount: amount,
     toAmount,
     priceImpact: 0.3,
-    fee: (parseFloat(amount) * 0.003).toFixed(6),
+    fee: '0.50',
     route: [fromToken, toToken],
     chainId: CHAIN_IDS[chainKey] || 1,
-    protocol: DEFI_PROTOCOLS[chainKey]?.[0]?.name || 'DEX',
+    protocol: chainKey === 'solana' ? 'Jupiter' : chainKey === 'sui' ? 'Cetus' : 'Uniswap V3',
   };
 }
 
@@ -203,63 +134,10 @@ export async function getBridgeQuote(
   token: string,
   amount: string
 ): Promise<BridgeQuote | null> {
-  const lifiApiKey = process.env.LIFI_API_KEY;
-  
-  // If LI.FI API key is configured, use it
-  if (lifiApiKey) {
-    try {
-      const fromChainId = CHAIN_IDS[fromChain];
-      const toChainId = CHAIN_IDS[toChain];
-      
-      if (!fromChainId || !toChainId) {
-        throw new Error('Chain not supported');
-      }
-
-      const fromToken = TOKEN_ADDRESSES[fromChain]?.[token];
-      const toToken = TOKEN_ADDRESSES[toChain]?.[token];
-      
-      if (!fromToken || !toToken) {
-        throw new Error('Token not supported');
-      }
-
-      const decimals = TOKEN_DECIMALS[token] || 18;
-      const amountWei = BigInt(Math.floor(parseFloat(amount) * Math.pow(10, decimals))).toString();
-
-      const response = await fetch('https://li.quest/v1/quote', {
-        method: 'GET',
-        headers: {
-          'x-lifi-api-key': lifiApiKey,
-          'Accept': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        return {
-          fromChain,
-          toChain,
-          token,
-          amount,
-          estimatedReceive: data.estimate?.toAmount || amount,
-          fee: data.estimate?.feeCosts?.[0]?.amountUSD || '0',
-          estimatedTime: `${data.estimate?.executionDuration || 10} minutes`,
-        };
-      }
-    } catch (error) {
-      console.error('LI.FI API error:', error);
-    }
-  }
-
-  // Fallback to mock data
-  return getMockBridgeQuote(fromChain, toChain, token, amount);
-}
-
-function getMockBridgeQuote(
-  fromChain: string,
-  toChain: string,
-  token: string,
-  amount: string
-): BridgeQuote {
+  // For now, return estimates. In production, integrate with:
+  // - Stargate
+  // - Across
+  // - Hop Protocol
   const fee = parseFloat(amount) * 0.001;
   return {
     fromChain,
@@ -276,8 +154,6 @@ function getMockBridgeQuote(
 // Staking Functions
 // ============================================
 export async function getStakingOptions(chainKey: DefiChainKey): Promise<StakingInfo[]> {
-  // In production, fetch from protocol APIs
-  // For now, return representative data
   const stakingData: Record<string, StakingInfo[]> = {
     ethereum: [
       { protocol: 'Lido', token: 'ETH', apy: 3.8, tvl: '$28.5B', minStake: '0.01' },
@@ -286,7 +162,7 @@ export async function getStakingOptions(chainKey: DefiChainKey): Promise<Staking
     ],
     arbitrum: [
       { protocol: 'GMX', token: 'GMX', apy: 12.5, tvl: '$450M', minStake: '1' },
-      { protocol: 'Pendle', token: 'PENDLE', apy: 8.2, tvl: '$180M', minStake: '10' },
+      { protocol: 'Pendle', token: 'ETH', apy: 8.2, tvl: '$180M', minStake: '0.1' },
     ],
     base: [
       { protocol: 'Aerodrome', token: 'AERO', apy: 25.0, tvl: '$200M', minStake: '10' },
@@ -310,21 +186,22 @@ export async function getStakingOptions(chainKey: DefiChainKey): Promise<Staking
 // Liquidity Pool Functions
 // ============================================
 export async function getLiquidityPools(chainKey: DefiChainKey): Promise<LPInfo[]> {
-  // In production, fetch from protocol APIs
   const lpData: Record<string, LPInfo[]> = {
     ethereum: [
       { protocol: 'Uniswap V3', pool: 'ETH/USDC', token0: 'ETH', token1: 'USDC', apy: 18.5, tvl: '$320M', fee: 0.3 },
+      { protocol: 'Uniswap V3', pool: 'ETH/USDT', token0: 'ETH', token1: 'USDT', apy: 15.2, tvl: '$180M', fee: 0.3 },
       { protocol: 'Curve', pool: '3pool', token0: 'USDC', token1: 'USDT', apy: 4.2, tvl: '$850M', fee: 0.04 },
     ],
     arbitrum: [
-      { protocol: 'Camelot', pool: 'ETH/USDC', token0: 'ETH', token1: 'USDC', apy: 25.3, tvl: '$45M', fee: 0.3 },
-      { protocol: 'GMX', pool: 'GLP', token0: 'ETH', token1: 'USDC', apy: 15.8, tvl: '$380M', fee: 0 },
+      { protocol: 'Uniswap V3', pool: 'ETH/USDC', token0: 'ETH', token1: 'USDC', apy: 22.3, tvl: '$85M', fee: 0.3 },
+      { protocol: 'Camelot', pool: 'ETH/ARB', token0: 'ETH', token1: 'ARB', apy: 28.5, tvl: '$45M', fee: 0.3 },
     ],
     base: [
+      { protocol: 'Uniswap V3', pool: 'ETH/USDC', token0: 'ETH', token1: 'USDC', apy: 25.1, tvl: '$65M', fee: 0.3 },
       { protocol: 'Aerodrome', pool: 'ETH/USDC', token0: 'ETH', token1: 'USDC', apy: 32.1, tvl: '$28M', fee: 0.3 },
     ],
     polygon: [
-      { protocol: 'QuickSwap', pool: 'MATIC/USDC', token0: 'MATIC', token1: 'USDC', apy: 15.0, tvl: '$50M', fee: 0.3 },
+      { protocol: 'Uniswap V3', pool: 'MATIC/USDC', token0: 'MATIC', token1: 'USDC', apy: 12.0, tvl: '$40M', fee: 0.3 },
     ],
     solana: [
       { protocol: 'Raydium', pool: 'SOL/USDC', token0: 'SOL', token1: 'USDC', apy: 28.5, tvl: '$85M', fee: 0.25 },
@@ -358,12 +235,4 @@ export function getSupportedChains() {
 
 export function getChainId(chainKey: string): number {
   return CHAIN_IDS[chainKey] || 1;
-}
-
-export function getTokenAddress(chainKey: string, tokenSymbol: string): string | undefined {
-  return TOKEN_ADDRESSES[chainKey]?.[tokenSymbol];
-}
-
-export function getTokenDecimals(tokenSymbol: string): number {
-  return TOKEN_DECIMALS[tokenSymbol] || 18;
 }
