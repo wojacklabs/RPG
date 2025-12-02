@@ -231,7 +231,7 @@ export class BootScene extends Phaser.Scene {
       { key: 'npc_sage', clothes: p.clothes.white, hat: 0x4a3048 },
       { key: 'npc_guild', clothes: p.clothes.green, hat: 0x2a5a3a },
       { key: 'npc_elder', clothes: p.clothes.purple, hat: 0x3a2048 },
-      { key: 'npc_artist', clothes: { base: 0x4080c0, dark: 0x2060a0, light: 0x60a0e0 }, hat: 0xf0b030 },
+      { key: 'npc_artist', clothes: { base: 0xff6b9d, dark: 0xc44d7a, light: 0xff8fb8 }, hat: 0xffd700 },
     ];
 
     npcConfigs.forEach(config => {

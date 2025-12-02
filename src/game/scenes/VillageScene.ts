@@ -248,8 +248,8 @@ export class VillageScene extends Phaser.Scene {
       { x: 60, y: 30, type: 'BRIDGE_SAILOR' },
       { x: 20, y: 35, type: 'STAKING_SAGE' },
       { x: 60, y: 35, type: 'LP_GUILDMASTER' },
-      { x: 40, y: 26, type: 'VILLAGE_ELDER' },
-      { x: 40, y: 33, type: 'NFT_ARTIST' },
+      { x: 35, y: 27, type: 'VILLAGE_ELDER' },
+      { x: 45, y: 27, type: 'NFT_ARTIST' },
     ];
 
     npcPositions.forEach(pos => {

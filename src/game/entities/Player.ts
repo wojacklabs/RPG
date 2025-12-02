@@ -51,11 +51,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   private createAnimations(): void {
-    // Animation frame order: DOWN(row 0), LEFT(row 1), RIGHT(row 2), UP(row 3)
-    const dirs = ['down', 'left', 'right', 'up'];
+    // Spritesheet layout: row0=UP(back), row1=LEFT, row2=RIGHT, row3=DOWN(face)
+    // Map direction names to correct rows
+    const dirToRow: Record<string, number> = {
+      'down': 3,  // row 3 = facing player (eyes visible)
+      'left': 1,  // row 1
+      'right': 2, // row 2
+      'up': 0,    // row 0 = facing away (back of head)
+    };
     
-    dirs.forEach((dir, idx) => {
-      const startFrame = idx * 4;
+    Object.entries(dirToRow).forEach(([dir, row]) => {
+      const startFrame = row * 4;
       
       if (!this.scene.anims.exists(`walk_${dir}`)) {
         // Create frames array manually for compatibility
