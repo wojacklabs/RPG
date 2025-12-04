@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { useGameStore, OtherPlayer } from '@/stores/gameStore';
 import { useMultiplayer } from '@/hooks/useMultiplayer';
 
-const WORLD_SIZE = 120;
+const WORLD_SIZE = 200;
 
 // Korean Traditional Roof (기와지붕)
 function KoreanRoof({ width, depth, color = '#2a2a2a' }: { width: number; depth: number; color?: string }) {
@@ -391,7 +391,7 @@ function Player({ position, direction }: { position: [number, number, number]; d
 
   useFrame((state) => {
     if (groupRef.current) {
-      groupRef.current.rotation.y = -direction + Math.PI;
+      groupRef.current.rotation.y = direction;
       
       // Check if moving
       const isMoving = lastPos.current[0] !== position[0] || lastPos.current[2] !== position[2];
@@ -628,6 +628,299 @@ function Well({ position }: { position: [number, number, number] }) {
   );
 }
 
+// Hill (언덕)
+function Hill({ position, size = [15, 4, 15], color = '#4a9050' }: { 
+  position: [number, number, number]; 
+  size?: [number, number, number];
+  color?: string;
+}) {
+  return (
+    <group position={position}>
+      <mesh castShadow receiveShadow>
+        <sphereGeometry args={[size[0] / 2, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
+      {/* Grass details on hill */}
+      {Array.from({ length: 8 }).map((_, i) => (
+        <mesh key={i} position={[
+          (Math.random() - 0.5) * size[0] * 0.7,
+          size[1] * 0.3 + Math.random() * 0.5,
+          (Math.random() - 0.5) * size[2] * 0.7
+        ]} castShadow>
+          <coneGeometry args={[0.3, 0.8, 4]} />
+          <meshStandardMaterial color="#3a8040" />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+// Stream (개천)
+function Stream({ points }: { points: [number, number][] }) {
+  const streamShape = useMemo(() => {
+    const shape = new THREE.Shape();
+    shape.moveTo(points[0][0], points[0][1]);
+    for (let i = 1; i < points.length; i++) {
+      shape.lineTo(points[i][0], points[i][1]);
+    }
+    // Create width
+    for (let i = points.length - 1; i >= 0; i--) {
+      shape.lineTo(points[i][0] + 3, points[i][1] + 0.5);
+    }
+    shape.closePath();
+    return shape;
+  }, [points]);
+
+  return (
+    <group>
+      {/* Water base */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.1, 0]}>
+        <shapeGeometry args={[streamShape]} />
+        <meshStandardMaterial 
+          color="#4080a0" 
+          transparent 
+          opacity={0.8}
+          metalness={0.3}
+          roughness={0.2}
+        />
+      </mesh>
+      {/* Water surface reflection */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]}>
+        <shapeGeometry args={[streamShape]} />
+        <meshStandardMaterial 
+          color="#80c0e0" 
+          transparent 
+          opacity={0.4}
+        />
+      </mesh>
+      {/* Stream bed */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.3, 0]}>
+        <shapeGeometry args={[streamShape]} />
+        <meshStandardMaterial color="#506070" />
+      </mesh>
+      {/* Rocks in stream */}
+      {points.filter((_, i) => i % 3 === 0).map((point, i) => (
+        <mesh key={i} position={[point[0] + 1.5, -0.1, point[1]]} castShadow>
+          <sphereGeometry args={[0.3 + Math.random() * 0.3, 6, 6]} />
+          <meshStandardMaterial color="#707080" />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
+// Wooden Bridge (나무 다리)
+function WoodenBridge({ position, rotation = 0, length = 6 }: { 
+  position: [number, number, number]; 
+  rotation?: number;
+  length?: number;
+}) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]}>
+      {/* Main planks */}
+      <mesh position={[0, 0.3, 0]} castShadow>
+        <boxGeometry args={[length, 0.15, 2.5]} />
+        <meshStandardMaterial color="#6a5040" />
+      </mesh>
+      {/* Plank details */}
+      {Array.from({ length: Math.floor(length / 0.5) }).map((_, i) => (
+        <mesh key={i} position={[-length/2 + i * 0.5 + 0.25, 0.38, 0]} castShadow>
+          <boxGeometry args={[0.45, 0.02, 2.4]} />
+          <meshStandardMaterial color={i % 2 === 0 ? '#5a4030' : '#7a6050'} />
+        </mesh>
+      ))}
+      {/* Support posts */}
+      <mesh position={[-length/2 + 0.3, -0.3, -1]} castShadow>
+        <boxGeometry args={[0.3, 1.2, 0.3]} />
+        <meshStandardMaterial color="#4a3020" />
+      </mesh>
+      <mesh position={[-length/2 + 0.3, -0.3, 1]} castShadow>
+        <boxGeometry args={[0.3, 1.2, 0.3]} />
+        <meshStandardMaterial color="#4a3020" />
+      </mesh>
+      <mesh position={[length/2 - 0.3, -0.3, -1]} castShadow>
+        <boxGeometry args={[0.3, 1.2, 0.3]} />
+        <meshStandardMaterial color="#4a3020" />
+      </mesh>
+      <mesh position={[length/2 - 0.3, -0.3, 1]} castShadow>
+        <boxGeometry args={[0.3, 1.2, 0.3]} />
+        <meshStandardMaterial color="#4a3020" />
+      </mesh>
+      {/* Railings */}
+      <mesh position={[0, 0.8, -1.1]} castShadow>
+        <boxGeometry args={[length, 0.1, 0.1]} />
+        <meshStandardMaterial color="#5a4030" />
+      </mesh>
+      <mesh position={[0, 0.8, 1.1]} castShadow>
+        <boxGeometry args={[length, 0.1, 0.1]} />
+        <meshStandardMaterial color="#5a4030" />
+      </mesh>
+      {/* Railing posts */}
+      {[-length/2 + 0.5, 0, length/2 - 0.5].map((x, i) => (
+        <group key={i}>
+          <mesh position={[x, 0.55, -1.1]} castShadow>
+            <boxGeometry args={[0.1, 0.5, 0.1]} />
+            <meshStandardMaterial color="#4a3020" />
+          </mesh>
+          <mesh position={[x, 0.55, 1.1]} castShadow>
+            <boxGeometry args={[0.1, 0.5, 0.1]} />
+            <meshStandardMaterial color="#4a3020" />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// Large Rock (바위)
+function LargeRock({ position, scale = 1 }: { position: [number, number, number]; scale?: number }) {
+  return (
+    <group position={position} scale={scale}>
+      <mesh castShadow>
+        <dodecahedronGeometry args={[1.5, 0]} />
+        <meshStandardMaterial color="#808090" flatShading />
+      </mesh>
+      <mesh position={[0.8, -0.3, 0.5]} castShadow>
+        <dodecahedronGeometry args={[0.8, 0]} />
+        <meshStandardMaterial color="#707080" flatShading />
+      </mesh>
+      <mesh position={[-0.5, -0.4, -0.6]} castShadow>
+        <dodecahedronGeometry args={[0.6, 0]} />
+        <meshStandardMaterial color="#909098" flatShading />
+      </mesh>
+    </group>
+  );
+}
+
+// Flower Patch (꽃밭)
+function FlowerPatch({ position, radius = 3 }: { position: [number, number, number]; radius?: number }) {
+  const flowers = useMemo(() => {
+    const arr = [];
+    const colors = ['#ff6b8a', '#ffb366', '#ffff66', '#66b3ff', '#ff66ff', '#ffffff'];
+    for (let i = 0; i < 20; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const r = Math.random() * radius;
+      arr.push({
+        x: Math.cos(angle) * r,
+        z: Math.sin(angle) * r,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        height: 0.3 + Math.random() * 0.3
+      });
+    }
+    return arr;
+  }, [radius]);
+
+  return (
+    <group position={position}>
+      {flowers.map((f, i) => (
+        <group key={i} position={[f.x, f.height / 2, f.z]}>
+          {/* Stem */}
+          <mesh>
+            <cylinderGeometry args={[0.02, 0.02, f.height, 4]} />
+            <meshStandardMaterial color="#228b22" />
+          </mesh>
+          {/* Flower */}
+          <mesh position={[0, f.height / 2 + 0.05, 0]}>
+            <sphereGeometry args={[0.08, 6, 6]} />
+            <meshStandardMaterial color={f.color} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// Bamboo Grove (대나무 숲)
+function BambooGrove({ position, count = 8 }: { position: [number, number, number]; count?: number }) {
+  const bamboos = useMemo(() => {
+    const arr = [];
+    for (let i = 0; i < count; i++) {
+      arr.push({
+        x: (Math.random() - 0.5) * 6,
+        z: (Math.random() - 0.5) * 6,
+        height: 5 + Math.random() * 4,
+        segments: 4 + Math.floor(Math.random() * 3)
+      });
+    }
+    return arr;
+  }, [count]);
+
+  return (
+    <group position={position}>
+      {bamboos.map((b, i) => (
+        <group key={i} position={[b.x, 0, b.z]}>
+          {/* Bamboo segments */}
+          {Array.from({ length: b.segments }).map((_, j) => (
+            <group key={j}>
+              <mesh position={[0, j * (b.height / b.segments) + b.height / b.segments / 2, 0]} castShadow>
+                <cylinderGeometry args={[0.15, 0.18, b.height / b.segments - 0.1, 8]} />
+                <meshStandardMaterial color="#7cb342" />
+              </mesh>
+              {/* Node */}
+              <mesh position={[0, (j + 1) * (b.height / b.segments), 0]} castShadow>
+                <cylinderGeometry args={[0.2, 0.2, 0.1, 8]} />
+                <meshStandardMaterial color="#558b2f" />
+              </mesh>
+            </group>
+          ))}
+          {/* Leaves at top */}
+          {[0, 1, 2].map((l) => (
+            <mesh key={l} position={[
+              Math.cos(l * 2) * 0.5, 
+              b.height + 0.5, 
+              Math.sin(l * 2) * 0.5
+            ]} rotation={[0.5, l * 2, 0]} castShadow>
+              <coneGeometry args={[0.4, 1.5, 4]} />
+              <meshStandardMaterial color="#8bc34a" />
+            </mesh>
+          ))}
+        </group>
+      ))}
+    </group>
+  );
+}
+
+// Rice Paddy (논)
+function RicePaddy({ position, size = [12, 12] }: { position: [number, number, number]; size?: [number, number] }) {
+  return (
+    <group position={position}>
+      {/* Water */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.15, 0]}>
+        <planeGeometry args={size} />
+        <meshStandardMaterial color="#6090a0" transparent opacity={0.6} metalness={0.2} roughness={0.3} />
+      </mesh>
+      {/* Mud border */}
+      <mesh position={[0, -0.1, -size[1]/2]} castShadow>
+        <boxGeometry args={[size[0] + 0.5, 0.3, 0.5]} />
+        <meshStandardMaterial color="#6a5a4a" />
+      </mesh>
+      <mesh position={[0, -0.1, size[1]/2]} castShadow>
+        <boxGeometry args={[size[0] + 0.5, 0.3, 0.5]} />
+        <meshStandardMaterial color="#6a5a4a" />
+      </mesh>
+      <mesh position={[-size[0]/2, -0.1, 0]} castShadow>
+        <boxGeometry args={[0.5, 0.3, size[1]]} />
+        <meshStandardMaterial color="#6a5a4a" />
+      </mesh>
+      <mesh position={[size[0]/2, -0.1, 0]} castShadow>
+        <boxGeometry args={[0.5, 0.3, size[1]]} />
+        <meshStandardMaterial color="#6a5a4a" />
+      </mesh>
+      {/* Rice plants */}
+      {Array.from({ length: 40 }).map((_, i) => (
+        <mesh key={i} position={[
+          (Math.random() - 0.5) * (size[0] - 1),
+          0.2,
+          (Math.random() - 0.5) * (size[1] - 1)
+        ]}>
+          <coneGeometry args={[0.1, 0.6, 4]} />
+          <meshStandardMaterial color="#7cb342" />
+        </mesh>
+      ))}
+    </group>
+  );
+}
+
 // Ground with better texture
 function Ground() {
   const grassTexture = useMemo(() => {
@@ -694,27 +987,37 @@ function Ground() {
         <meshStandardMaterial map={grassTexture} />
       </mesh>
       
-      {/* Village center path */}
+      {/* Village center path - larger */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
-        <planeGeometry args={[25, 25]} />
+        <planeGeometry args={[35, 35]} />
         <meshStandardMaterial map={pathTexture} />
       </mesh>
       
       {/* Path to buildings */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-12, 0.01, 0]} receiveShadow>
-        <planeGeometry args={[8, 3]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-20, 0.01, 0]} receiveShadow>
+        <planeGeometry args={[15, 3]} />
         <meshStandardMaterial map={pathTexture} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[12, 0.01, 0]} receiveShadow>
-        <planeGeometry args={[8, 3]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[20, 0.01, 0]} receiveShadow>
+        <planeGeometry args={[15, 3]} />
         <meshStandardMaterial map={pathTexture} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -12]} receiveShadow>
-        <planeGeometry args={[3, 8]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -18]} receiveShadow>
+        <planeGeometry args={[3, 12]} />
         <meshStandardMaterial map={pathTexture} />
       </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 12]} receiveShadow>
-        <planeGeometry args={[3, 8]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 18]} receiveShadow>
+        <planeGeometry args={[3, 12]} />
+        <meshStandardMaterial map={pathTexture} />
+      </mesh>
+      
+      {/* Outer paths */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[-30, 0.01, -15]} receiveShadow>
+        <planeGeometry args={[10, 3]} />
+        <meshStandardMaterial map={pathTexture} />
+      </mesh>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[30, 0.01, -15]} receiveShadow>
+        <planeGeometry args={[10, 3]} />
         <meshStandardMaterial map={pathTexture} />
       </mesh>
     </group>
@@ -769,25 +1072,55 @@ interface GameSceneProps {
 function GameScene({ playerPos, playerDir, npcs, nearNPC, onNPCClick, otherPlayers }: GameSceneProps) {
   const trees = useMemo(() => {
     const positions: [number, number, number][] = [];
-    // Trees around the village
-    for (let i = 0; i < 35; i++) {
-      const angle = (i / 35) * Math.PI * 2;
-      const radius = 30 + Math.random() * 20;
+    // Inner ring of trees around the village
+    for (let i = 0; i < 40; i++) {
+      const angle = (i / 40) * Math.PI * 2;
+      const radius = 38 + Math.random() * 15;
       const x = Math.cos(angle) * radius;
       const z = Math.sin(angle) * radius;
-      positions.push([x, 0, z]);
+      // Avoid stream area (x around 35-50)
+      if (x < 32 || x > 52) {
+        positions.push([x, 0, z]);
+      }
+    }
+    // Outer ring of trees
+    for (let i = 0; i < 60; i++) {
+      const angle = (i / 60) * Math.PI * 2;
+      const radius = 60 + Math.random() * 25;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      // Avoid stream area
+      if (x < 32 || x > 52) {
+        positions.push([x, 0, z]);
+      }
+    }
+    // Forest clusters
+    for (let i = 0; i < 25; i++) {
+      positions.push([-65 + Math.random() * 15, 0, -40 + Math.random() * 30]);
+      positions.push([65 + Math.random() * 15, 0, -30 + Math.random() * 25]);
     }
     return positions;
   }, []);
 
   const lanterns = useMemo(() => {
     return [
-      [-8, 0, -2] as [number, number, number],
-      [8, 0, -2] as [number, number, number],
-      [-8, 0, 5] as [number, number, number],
-      [8, 0, 5] as [number, number, number],
-      [0, 0, -8] as [number, number, number],
-      [0, 0, 8] as [number, number, number],
+      // Village center
+      [-12, 0, -5] as [number, number, number],
+      [12, 0, -5] as [number, number, number],
+      [-12, 0, 8] as [number, number, number],
+      [12, 0, 8] as [number, number, number],
+      [0, 0, -10] as [number, number, number],
+      [0, 0, 12] as [number, number, number],
+      // Near buildings
+      [-18, 0, -12] as [number, number, number],
+      [18, 0, -12] as [number, number, number],
+      [-18, 0, 18] as [number, number, number],
+      [18, 0, 18] as [number, number, number],
+      // Path lights
+      [-30, 0, 0] as [number, number, number],
+      [30, 0, 0] as [number, number, number],
+      [0, 0, -25] as [number, number, number],
+      [0, 0, 25] as [number, number, number],
     ];
   }, []);
 
@@ -825,39 +1158,90 @@ function GameScene({ playerPos, playerDir, npcs, nearNPC, onNPCClick, otherPlaye
         />
       ))}
       
-      {/* Buildings */}
+      {/* Buildings - expanded layout */}
       <KoreanBuilding 
-        position={[-18, 0, -8]} 
-        size={[7, 4.5, 6]}
+        position={[-25, 0, -12]} 
+        size={[8, 5, 7]}
         roofColor="#2a2020"
         wallColor="#f5e8d0"
         name="Swap Shop"
         icon="💱"
       />
       <KoreanBuilding 
-        position={[18, 0, -8]} 
-        size={[7, 4.5, 6]}
+        position={[25, 0, -12]} 
+        size={[8, 5, 7]}
         roofColor="#2a1a2a"
         wallColor="#e8e0f0"
         name="Bridge Port"
         icon="🌉"
       />
       <KoreanBuilding 
-        position={[-18, 0, 12]} 
-        size={[7, 4.5, 6]}
+        position={[-25, 0, 18]} 
+        size={[8, 5, 7]}
         roofColor="#1a2a20"
         wallColor="#e0f0e8"
         name="Staking Temple"
         icon="🏛️"
       />
       <KoreanBuilding 
-        position={[18, 0, 12]} 
-        size={[7, 4.5, 6]}
+        position={[25, 0, 18]} 
+        size={[8, 5, 7]}
         roofColor="#2a2a1a"
         wallColor="#f0f0d8"
         name="LP Guild"
         icon="💰"
       />
+      <KoreanBuilding 
+        position={[0, 0, -20]} 
+        size={[8, 5, 7]}
+        roofColor="#3a1a2a"
+        wallColor="#ffe8f0"
+        name="NFT Gallery"
+        icon="🖼️"
+      />
+      
+      {/* Hills around the village */}
+      <Hill position={[-55, 0, -30]} size={[20, 6, 18]} color="#4a9050" />
+      <Hill position={[55, 0, -25]} size={[18, 5, 16]} color="#3a8040" />
+      <Hill position={[-50, 0, 40]} size={[22, 7, 20]} color="#4a9050" />
+      <Hill position={[50, 0, 45]} size={[16, 5, 14]} color="#3a8040" />
+      <Hill position={[0, 0, 55]} size={[25, 8, 22]} color="#4a9050" />
+      <Hill position={[-60, 0, 5]} size={[15, 4, 15]} color="#3a8040" />
+      <Hill position={[60, 0, 10]} size={[18, 5, 16]} color="#4a9050" />
+      
+      {/* Stream running through the eastern side */}
+      <Stream points={[
+        [40, -60], [42, -45], [38, -30], [40, -15], 
+        [45, 0], [42, 15], [38, 30], [40, 45], [42, 60]
+      ]} />
+      
+      {/* Wooden bridges over stream */}
+      <WoodenBridge position={[41, 0, -15]} rotation={Math.PI / 2} length={7} />
+      <WoodenBridge position={[41, 0, 30]} rotation={Math.PI / 2} length={7} />
+      
+      {/* Large rocks scattered around */}
+      <LargeRock position={[-45, 0, -20]} scale={1.2} />
+      <LargeRock position={[48, 0, 35]} scale={0.9} />
+      <LargeRock position={[-38, 0, 45]} scale={1.1} />
+      <LargeRock position={[35, 0, -45]} scale={0.8} />
+      <LargeRock position={[-55, 0, 25]} scale={1.0} />
+      
+      {/* Flower patches */}
+      <FlowerPatch position={[-15, 0, -35]} radius={4} />
+      <FlowerPatch position={[15, 0, -35]} radius={3} />
+      <FlowerPatch position={[-30, 0, 30]} radius={5} />
+      <FlowerPatch position={[30, 0, 35]} radius={4} />
+      <FlowerPatch position={[0, 0, 40]} radius={3} />
+      
+      {/* Bamboo groves */}
+      <BambooGrove position={[-45, 0, 15]} count={10} />
+      <BambooGrove position={[50, 0, -40]} count={8} />
+      <BambooGrove position={[-55, 0, -45]} count={12} />
+      
+      {/* Rice paddies in the distance */}
+      <RicePaddy position={[-50, 0, 55]} size={[15, 12]} />
+      <RicePaddy position={[55, 0, 50]} size={[12, 10]} />
+      <RicePaddy position={[-60, 0, -55]} size={[14, 11]} />
       
       {/* NPCs in front of buildings */}
       {npcs.map((npc) => (
@@ -884,14 +1268,18 @@ function GameScene({ playerPos, playerDir, npcs, nearNPC, onNPCClick, otherPlaye
       {/* Well in center */}
       <Well position={[0, 0, 0]} />
       
-      {/* Stone walls */}
-      <StoneWall start={[-25, -15]} end={[-25, 18]} height={1.2} />
-      <StoneWall start={[25, -15]} end={[25, 18]} height={1.2} />
-      <StoneWall start={[-25, -15]} end={[25, -15]} height={1.2} />
-      <StoneWall start={[-25, 18]} end={[25, 18]} height={1.2} />
+      {/* Stone walls - expanded village boundary */}
+      <StoneWall start={[-35, -28]} end={[-35, 32]} height={1.2} />
+      <StoneWall start={[35, -28]} end={[35, 32]} height={1.2} />
+      <StoneWall start={[-35, -28]} end={[35, -28]} height={1.2} />
+      <StoneWall start={[-35, 32]} end={[35, 32]} height={1.2} />
       
-      {/* Sky color */}
-      <fog attach="fog" args={['#a8c8e8', 40, 100]} />
+      {/* Inner decorative walls */}
+      <StoneWall start={[-15, -18]} end={[-25, -18]} height={0.8} />
+      <StoneWall start={[15, -18]} end={[25, -18]} height={0.8} />
+      
+      {/* Sky color - extended for larger world */}
+      <fog attach="fog" args={['#a8c8e8', 60, 150]} />
     </>
   );
 }
@@ -976,7 +1364,7 @@ export function Game3D() {
   const npcs: NPCData[] = useMemo(() => [
     { 
       id: 'swap', 
-      position: [-18, 0, -1] as [number, number, number], 
+      position: [-25, 0, -4] as [number, number, number], 
       color: '#4080a0', 
       name: 'Swap Merchant', 
       action: 'swap', 
@@ -984,7 +1372,7 @@ export function Game3D() {
     },
     { 
       id: 'bridge', 
-      position: [18, 0, -1] as [number, number, number], 
+      position: [25, 0, -4] as [number, number, number], 
       color: '#a04080', 
       name: 'Bridge Keeper', 
       action: 'bridge', 
@@ -992,7 +1380,7 @@ export function Game3D() {
     },
     { 
       id: 'stake', 
-      position: [-18, 0, 19] as [number, number, number], 
+      position: [-25, 0, 26] as [number, number, number], 
       color: '#40a040', 
       name: 'Staking Master', 
       action: 'staking', 
@@ -1000,11 +1388,27 @@ export function Game3D() {
     },
     { 
       id: 'lp', 
-      position: [18, 0, 19] as [number, number, number], 
+      position: [25, 0, 26] as [number, number, number], 
       color: '#a0a040', 
       name: 'LP Guild Master', 
       action: 'liquidity', 
       dialogs: ['Join our guild!', 'Provide liquidity, earn fees.', 'Interested?'] 
+    },
+    { 
+      id: 'nft', 
+      position: [0, 0, -12] as [number, number, number], 
+      color: '#ff6b9d', 
+      name: 'NFT Artist', 
+      action: 'nft', 
+      dialogs: ['Looking for rare NFTs?', 'I have collections from all chains!', 'Want to browse?'] 
+    },
+    { 
+      id: 'elder', 
+      position: [0, 0, 8] as [number, number, number], 
+      color: '#8060a0', 
+      name: 'Village Elder', 
+      action: 'info', 
+      dialogs: ['Welcome to DeFi Village!', 'Explore and discover the world of decentralized finance.', 'Each building offers unique services.'] 
     },
   ], []);
 
@@ -1068,8 +1472,8 @@ export function Game3D() {
           dz /= len;
 
           setPlayerPos(prev => {
-            const newX = Math.max(-50, Math.min(50, prev.x + dx * speed));
-            const newZ = Math.max(-50, Math.min(50, prev.z + dz * speed));
+            const newX = Math.max(-90, Math.min(90, prev.x + dx * speed));
+            const newZ = Math.max(-90, Math.min(90, prev.z + dz * speed));
             return new THREE.Vector3(newX, 0, newZ);
           });
 
@@ -1134,11 +1538,22 @@ export function Game3D() {
           )}
         </div>
         <div className="hud-minimap">
+          {/* Stream indicator */}
+          <div style={{
+            position: 'absolute',
+            left: '70%',
+            top: '10%',
+            width: '3px',
+            height: '80%',
+            backgroundColor: '#4080a0',
+            opacity: 0.6,
+            borderRadius: '2px'
+          }} />
           <div 
             className="minimap-player"
             style={{
-              left: `${50 + (playerPos.x / 100) * 100}%`,
-              top: `${50 + (playerPos.z / 100) * 100}%`
+              left: `${50 + (playerPos.x / 180) * 100}%`,
+              top: `${50 + (playerPos.z / 180) * 100}%`
             }}
           />
           {npcs.map(npc => (
@@ -1146,17 +1561,18 @@ export function Game3D() {
               key={npc.id}
               className="minimap-npc"
               style={{
-                left: `${50 + (npc.position[0] / 100) * 100}%`,
-                top: `${50 + (npc.position[2] / 100) * 100}%`,
+                left: `${50 + (npc.position[0] / 180) * 100}%`,
+                top: `${50 + (npc.position[2] / 180) * 100}%`,
                 backgroundColor: npc.color
               }}
             />
           ))}
           {/* Buildings on minimap */}
-          <div className="minimap-building" style={{ left: '32%', top: '35%', backgroundColor: '#5a4030' }} />
-          <div className="minimap-building" style={{ left: '68%', top: '35%', backgroundColor: '#5a4030' }} />
-          <div className="minimap-building" style={{ left: '32%', top: '62%', backgroundColor: '#5a4030' }} />
-          <div className="minimap-building" style={{ left: '68%', top: '62%', backgroundColor: '#5a4030' }} />
+          <div className="minimap-building" style={{ left: '36%', top: '37%', backgroundColor: '#5a4030' }} />
+          <div className="minimap-building" style={{ left: '64%', top: '37%', backgroundColor: '#5a4030' }} />
+          <div className="minimap-building" style={{ left: '36%', top: '60%', backgroundColor: '#5a4030' }} />
+          <div className="minimap-building" style={{ left: '64%', top: '60%', backgroundColor: '#5a4030' }} />
+          <div className="minimap-building" style={{ left: '50%', top: '32%', backgroundColor: '#ff6b9d' }} />
         </div>
       </div>
 

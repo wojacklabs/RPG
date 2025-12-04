@@ -243,18 +243,19 @@ export class VillageScene extends Phaser.Scene {
   private createNPCs(): void {
     const ts = GAME_CONFIG.TILE_SIZE;
     
+    // NPC positions - 6 total including NFT_ARTIST
     const npcPositions: { x: number; y: number; type: NPCTypeKey }[] = [
-      { x: 20, y: 30, type: 'SWAP_MERCHANT' },
-      { x: 60, y: 30, type: 'BRIDGE_SAILOR' },
-      { x: 20, y: 35, type: 'STAKING_SAGE' },
-      { x: 60, y: 35, type: 'LP_GUILDMASTER' },
-      { x: 35, y: 27, type: 'VILLAGE_ELDER' },
-      { x: 45, y: 27, type: 'NFT_ARTIST' },
+      { x: 25, y: 28, type: 'SWAP_MERCHANT' },
+      { x: 55, y: 28, type: 'BRIDGE_SAILOR' },
+      { x: 25, y: 32, type: 'STAKING_SAGE' },
+      { x: 55, y: 32, type: 'LP_GUILDMASTER' },
+      { x: 35, y: 30, type: 'VILLAGE_ELDER' },
+      { x: 45, y: 30, type: 'NFT_ARTIST' },
     ];
 
-    npcPositions.forEach(pos => {
+    npcPositions.forEach((pos) => {
       const npc = new NPC(this, pos.x * ts, pos.y * ts, pos.type);
-      npc.setDepth(npc.y);
+      npc.setDepth(pos.y * ts + 100);
       this.npcs.push(npc);
       this.physics.add.collider(this.player, npc);
     });
